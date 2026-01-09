@@ -288,13 +288,16 @@
                 const workerUrl = URL.createObjectURL(workerBlob);
 
                 const gif = new GIF({ 
-                    workers: 2, quality: 10, width: 800, height: 600, 
-                    workerScript: workerUrl, dither: false
+                    workers: 2, quality: 1, width: 800, height: 600, 
+                    workerScript: workerUrl, dither: 'FloydSteinberg'
                 });
 
                 const tempCanvas = document.createElement('canvas');
                 const ctx = tempCanvas.getContext('2d');
                 tempCanvas.width = 800; tempCanvas.height = 600;
+
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
     
                 const logo = new Image(); logo.crossOrigin = "Anonymous"; logo.src = currentImages[0];
     
@@ -303,7 +306,8 @@
                     let x = 40, y = 40, dx = 1, dy = 1;
                     const delay = 30; 
                     const dt = delay / 1000; 
-                    const totalFrames = 100;
+                    const duration = Math.min(document.getElementById('gifDuration').value, 10) || 3;
+                    const totalFrames = Math.round((duration * 1000) / delay);
                     
                     for (let i = 0; i < totalFrames; i++) {
                         const rawSpeed = parseFloat(document.getElementById('imgSpeed').value);
@@ -323,7 +327,7 @@
                         if (y + 100 >= 600) { dy = -1; y = 500; } else if (y <= 0) { dy = 1; y = 0; }
 
                         ctx.save();
-                        ctx.translate(Math.round(x), Math.round(y));
+                        ctx.translate(x, y);
                         ctx.drawImage(logo, x, y, 100, 100);
                         ctx.restore();
                         
