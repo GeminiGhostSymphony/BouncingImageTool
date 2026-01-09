@@ -179,9 +179,12 @@
             localAssets.forEach(url => URL.revokeObjectURL(url));
             localAssets = [];
             currentImages = [];
-            document.getElementById('file-input-container').innerHTML = '<input type="file" class="file-input-row" accept="image/*" multiple>';
-            document.getElementById('fileInput').value = "";
-            initFileInput(document.querySelector('.file-input-row'));
+            const fileInputContainer = document.getElementById('file-input-container');
+            fileInputContainer.innerHTML = '';
+            const newInput = document.createElement('input');
+            newInput.type = 'file'; newInput.className = 'file-input-row'; newInput.accept = 'image/*'; newInput.multiple = true;
+            fileInputContainer.appendChild(newInput);
+            initFileInput(newInput);
             generateContent();
         }
 
@@ -313,20 +316,13 @@
                     if (hX) { dx = -dx; x = Math.max(0, Math.min(x, w - iw)); }
                     if (hY) { dy = -dy; y = Math.max(0, Math.min(y, h - ih)); }
 
-                    const currentSwapValue = parseFloat(document.getElementById('switchTime').value) || 0;
-                    const timeDiff = (Date.now() - lastSw) / 1000; // Seconds conversion
-                    if (currentSwapValue === 0) {
-                        // Mode 0: Swap only on wall hits
-                        if ((hX || hY) && imgs.length > 1) {
-                            idx = (idx + 1) % imgs.length;
-                            targetImg.src = imgs[idx];
-                            lastSw = Date.now();
-                        }
-                    } else if (timeDiff >= currentSwapValue && imgs.length > 1) {
-                        // Mode > 0: Swap based on timer regardless of hits
-                        idx = (idx + 1) % imgs.length;
-                        targetImg.src = imgs[idx];
-                        lastSw = Date.now();
+                    const swapDuration = isPreview 
+                        ? parseFloat(document.getElementById('switchTime').value) || 0
+                        : parseFloat(params.get('t')) || 0; 
+                    const timePassed = (Date.now() - lastSw) / 1000;
+                    
+                    if ((swapDuration === 0 && (hX || hY)) || (swapDuration > 0 && timePassed >= swapDuration)) {
+                        if (imgs.length > 1) { idx = (idx + 1) % imgs.length; targetImg.src = imgs[idx]; lastSw = Date.now(); }
                     }
                     targetImg.style.transform = `translate3d(${x}px, ${y}px, 0)`;
                     animationId = requestAnimationFrame(animate);
