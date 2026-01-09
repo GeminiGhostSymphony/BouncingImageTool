@@ -101,7 +101,7 @@
                     <option value="random">Random Selection of Above</option>
                 </select>
                 <div style="display:flex; gap:10px;">
-                    <div style="flex:1;"><label>Speed (px/second)</label><input type="number" id="imgSpeed" value="180" step="1"></div>
+                    <div style="flex:1;"><label>Speed (px/second)</label><input type="number" id="imgSpeed" value="15" step="1"></div>
                     <div style="flex:1;"><label>Swap Time (Seconds, 0 = Every Hit)</label><input type="number" id="switchTime" value="0" step="0.5"></div>
                 </div>
             </div>
@@ -173,12 +173,25 @@
                     
                     // Create a UI wrapper for the delete button
                     const wrapper = document.createElement('div');
-                    wrapper.className = 'upload-row';
-                    wrapper.innerHTML = `<span>Uploaded ${files.length} image(s)</span>`;
+                    wrapper.className = 'upload-row'; 
+                    wrapper.style.padding = '12px';
+                    wrapper.style.marginBottom = '10px';
+                    wrapper.style.border = '1px solid #444';
+                    wrapper.style.borderRadius = '8px';
+                    wrapper.style.background = '#252525';
+                    wrapper.style.display = 'flex';
+                    wrapper.style.alignItems = 'center';
+                    wrapper.style.justifyContent = 'space-between';
+        
+                    wrapper.innerHTML = `<span style="font-size: 0.9em; color: var(--text);">Uploaded ${files.length} file(s)</span>`;
                     
                     const delBtn = document.createElement('button');
                     delBtn.innerText = "Delete";
                     delBtn.className = "del-btn";
+                    delBtn.style.width = 'auto';
+                    delBtn.style.padding = '6px 12px';
+                    delBtn.style.margin = '0';
+                    delBtn.style.background = 'var(--err)';
                     delBtn.onclick = () => {
                         // Remove these specific blobs from the global list
                         localAssets = localAssets.filter(asset => !blobGroup.includes(asset));
@@ -190,7 +203,7 @@
                     wrapper.appendChild(delBtn);
                     el.parentElement.insertBefore(wrapper, el);
                     
-                    // Hide the used input so they can't re-upload in the same slot
+                    // Hide the used input so you can't re-upload in the same slot
                     el.style.display = 'none';
         
                     // Create the next fresh input row
