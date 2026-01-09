@@ -35,6 +35,7 @@
         input, select, textarea, button { padding: 14px; width: 100%; border-radius: 10px; border: 1px solid #444; background: #252525; color: white; margin-bottom: 12px; box-sizing: border-box; font-size: 14px; }
         button { background: var(--accent); color: #000; font-weight: 800; border: none; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
         button:hover { background: #fff; transform: scale(1.02); }
+        .clear-btn { background: #444; color: #fff; margin-top: 5px; font-size: 11px; padding: 8px;}
         .download-btn { background: var(--success); color: white; margin-top: 5px; }
 
         /* --- PREVIEW & OUTPUT --- */
@@ -63,11 +64,12 @@
 
             <!-- ASSETS -->
             <div class="card">
-                <h3>Assets</h3>
-                <label>Image URLs</label>
-                <textarea id="urlInput" rows="2" placeholder="imgur.com"></textarea>
-                <label>Upload Files</label>
-                <input type="file" id="fileInput" accept="image/*" multiple>
+                <h3>Image Assets</h3>
+                <label>Image URLs (one per line)</label>
+                <textarea id="urlInput" rows="2" placeholder="https://example.com/logo.png"></textarea>
+                <label>Upload Images</label>
+                <input type="file" class="local-file-input" accept="image/*" multiple>
+                <button class="clear-btn" onclick="clearLocalAssets()">Clear All Local Assets</button>
             </div>
 
             <!-- BEHAVIOR -->
@@ -104,7 +106,7 @@
             <div class="card" style="grid-column: span 2;">
                 <h3>Preview & Stream Export</h3>
                 <div id="preview-window"><div id="preview-msg" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#444;">Add an image to begin preview.</div></div>
-                <button onclick="generateContent()" style="margin-top:20px;">Generate Stream Overlay Package</button>
+                <button onclick="generateContent()" style="margin-top:20px;">Generate/Update Stream Overlay Package</button>
                 <div id="results-area" style="display:none; margin-top: 25px;">
                     <div id="lenWarning" class="url-warning">⚠️ URL too long! Use Web URLs instead of file uploads.</div>
                     <label>Browser Source URL (Length: <span id="urlCount">0</span>)</label>
@@ -124,21 +126,50 @@
         // INITIALIZATION & ROUTING
         const params = new URLSearchParams(window.location.search);
         const img = document.getElementById('bouncing-image');
-        let currentImages = [], lastFrameTime = performance.now();
+        let currentImages = []; 
+        let localAssets = []; // Storage for local file data
+        let lastFrameTime = performance.now();
+        let animationId = null; // Track animation to prevent duplicates
 
-        if (params.has('imgs')) { startLiveMode(false); } 
-        else { document.getElementById('setup-ui').style.display = 'block'; }
+        if (params.has('imgs')) { 
+            startLiveMode(false); 
+        } else { 
+            document.getElementById('setup-ui').style.display = 'block'; 
+            // Automatically update listeners
+            ['urlInput', 'imgSpeed', 'switchTime', 'effectType'].forEach(id => {
+                document.getElementById(id).addEventListener('input', generateContent);
+            });
+            
+            document.getElementById('fileInput').addEventListener('change', generateContent);
+        }
+
+        // ASSET MANAGEMENT
+        function clearLocalAssets() {
+            localAssets = [];
+            document.getElementById('fileInput').value = "";
+            generateContent();
+        }
 
         // GENERATOR LOGIC
         async function generateContent() {
             const files = document.getElementById('fileInput').files;
             const webUrls = document.getElementById('urlInput').value.split('\n').filter(u => u.trim() !== "");
-            const localData = await Promise.all(Array.from(files).map(f => new Promise(res => {
-                const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(f);
-            })));
 
-            currentImages = [...localData, ...webUrls];
-            if (!currentImages.length) return alert("Please add an image.");
+            // Capture new uploads into persistent list
+            if (files.length > 0) {
+                const newData = await Promise.all(Array.from(files).map(f => new Promise(res => {
+                    const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(f);
+                })));
+                localAssets = [...localAssets, ...newData];
+                document.getElementById('fileInput').value = ""; // Ready for next batch
+            }
+
+            currentImages = [...localAssets, ...webUrls];
+            if (!currentImages.length) {
+                document.getElementById('preview-msg').style.display = 'block';
+                if (animationId) cancelAnimationFrame(animationId);
+                return alert("Please add an image.");
+            }
 
             const settings = {
                 imgs: encodeURIComponent(JSON.stringify(currentImages)),
@@ -156,7 +187,10 @@
             document.getElementById('preview-msg').style.display = 'none';
 
             const previewBox = document.getElementById('preview-window');
-            previewBox.innerHTML = '<img id="preview-img" style="position:absolute; width:60px; will-change:transform; transform-origin: top left;">';
+            if (!document.getElementById('preview-img')) {
+                previewBox.innerHTML = '<img id="preview-img" style="position:absolute; width:60px; will-change:transform; transform-origin: top left;">';
+            }
+
             startLiveMode(true, settings, currentImages);
         }
 
@@ -208,7 +242,11 @@
 
         // ANIMATION 
         function startLiveMode(isPreview, settings = null, imagesArr = null) {
+            // Cancel any existing animation to prevent overlap
+            if (animationId) cancelAnimationFrame(animationId);
+            
             const targetImg = isPreview ? document.getElementById('preview-img') : img;
+            
             const container = isPreview ? document.getElementById('preview-window') : window;
             if (!isPreview) targetImg.style.display = 'block';
 
@@ -226,7 +264,8 @@
                 lastFrameTime = currentTime;
                 const w = isPreview ? container.clientWidth : container.innerWidth;
                 const h = isPreview ? container.clientHeight : container.innerHeight;
-                const iw = targetImg.clientWidth, ih = targetImg.clientHeight;
+                const iw = targetImg.clientWidth || 60; 
+                const ih = targetImg.clientHeight || 60;
                 const mult = isSlowing ? 0.2 : 1;
 
                 x += dx * deltaTime * mult; y += dy * deltaTime * mult;
@@ -234,7 +273,7 @@
                 let hitX = (x + iw >= w || x <= 0);
                 let hitY = (y + ih >= h || y <= 0);
 
-                if (hitX && hitY) triggerCelebration(effect, isPreview ? container : document.body, targetImg);
+                if (hitX && hitY) triggerCelebration(effect, isPreview ? container : document.body, targetImg, (s) => isSlowing = s);
 
                 // COLLISION BUFFER
                 if (hitX) { dx = -dx; x = Math.max(0, Math.min(x, w - iw)); }
@@ -249,16 +288,16 @@
                     }
                 }
                 targetImg.style.transform = `translate3d(${x}px, ${y}px, 0)`;
-                requestAnimationFrame(animate);
+                animationId = requestAnimationFrame(animate);
             }
-            targetImg.onload = () => { lastFrameTime = performance.now(); requestAnimationFrame(animate); };
+            targetImg.onload = () => { lastFrameTime = performance.now(); animationId = requestAnimationFrame(animate); };
             
             // RE-CENTER FOR RESIZING
             if (!isPreview) window.addEventListener('resize', () => { x = 20; y = 20; });
         }
 
         // CELEBRATION TRIGGER
-        function triggerCelebration(type, body, targetImg) {
+        function triggerCelebration(type, body, targetImg, setSlowing) {
             const effects = ['confetti', 'flash', 'shake', 'invert', 'rainbow', 'zoom'];
             const sel = type === 'random' ? effects[Math.floor(Math.random() * effects.length)] : type;
             
@@ -266,7 +305,7 @@
             else if (sel === 'flash') { body.style.backgroundColor = 'white'; setTimeout(() => body.style.backgroundColor = 'transparent', 150); }
             else if (sel === 'shake') { body.classList.add('shake-active'); setTimeout(() => body.classList.remove('shake-active'), 500); }
             else if (sel === 'invert') { targetImg.classList.add('invert-active'); setTimeout(() => targetImg.classList.remove('invert-active'), 400); }
-            else if (sel === 'zoom') { isSlowing = true; targetImg.classList.add('zoom-active'); setTimeout(() => { isSlowing = false; targetImg.classList.remove('zoom-active'); }, 1000); }
+            else if (sel === 'zoom') { setSlowing(true); targetImg.classList.add('zoom-active'); setTimeout(() => { setSlowing(false); targetImg.classList.remove('zoom-active'); }, 1000); }
             else if (sel === 'rainbow') {
                 let c = 0, colors = ['#ff0000', '#ffa500', '#ffff00', '#008000', '#0000ff', '#4b0082'];
                 let iv = setInterval(() => { body.style.backgroundColor = colors[c++]; if (c >= colors.length) { clearInterval(iv); body.style.backgroundColor = 'transparent'; } }, 120);
