@@ -306,6 +306,8 @@
                 cancelAnimationFrame(animationId);
                 animationId = null;
             }
+
+            lastFrameTime = 0;
             
             const targetImg = isPreview ? document.getElementById('preview-img') : img;
             
@@ -323,7 +325,11 @@
             targetImg.src = imgs[idx];
 
             function animate(now) {
-                if (!lastFrameTime) lastFrameTime = now;
+                if (!lastFrameTime) {
+                    lastFrameTime = now;
+                    animationId = requestAnimationFrame(animate);
+                    return;
+                }
                 const dt = Math.min((now - lastFrameTime) / 1000, 0.1); // Cap dt to prevent jumps
                 lastFrameTime = now;
                 
