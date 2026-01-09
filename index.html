@@ -247,8 +247,8 @@
             const workerUrl = URL.createObjectURL(workerBlob);
 
             const gif = new GIF({ 
-                workers: 2, quality: 10, width: 400, height: 300, 
-                workerScript: workerUrl 
+                workers: 4, quality: 1, width: 800, height: 600, 
+                workerScript: workerUrl, dither: 'FloydSteinberg'
             });
 
             const tempCanvas = document.createElement('canvas');
@@ -336,15 +336,13 @@
                 animationId = requestAnimationFrame(animate); 
             }
 
-            let isFirstLoad = true;
-            targetImg.onload = () => {
-                if (isFirstLoad) {
-                    lastFrameTime = performance.now();
-                    animationId = requestAnimationFrame(animate);
-                    isFirstLoad = false;
-                }
+            const start = () => {
+                lastFrameTime = performance.now();
+                animationId = requestAnimationFrame(animate);
             };
-            targetImg.src = imgs[idx];
+
+            if (targetImg.complete) start();
+            else targetImg.onload = start;
             
             // RE-CENTER FOR RESIZING
             if (!isPreview) window.addEventListener('resize', () => { x = 20; y = 20; });
