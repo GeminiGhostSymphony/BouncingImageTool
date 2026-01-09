@@ -153,32 +153,15 @@
         }
 
         function initFileInput(el) {
-            el.addEventListener('change', async (e) => {
+            el.addEventListener('change', (e) => {
                 const files = Array.from(e.target.files);
                 if (!files.length) return;
                 
-                const results = await Promise.all(files.map(file => new Promise(resolve => {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        const tempImg = new Image();
-                        tempImg.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            const max = 150; // COMPRESSION
-                            let w = tempImg.width, h = tempImg.height;
-                            if (w > h) { if (w > max) { h *= max/w; w = max; } }
-                            else { if (h > max) { w *= max/h; h = max; } }
-                            canvas.width = w; canvas.height = h;
-                            canvas.getContext('2d').drawImage(tempImg, 0, 0, w, h);
-                            resolve(canvas.toDataURL('image/jpeg', 0.25));
-                        };
-                        tempImg.src = event.target.result;
-                    };
-                    reader.readAsDataURL(file);
-                })));
+                // Create temporary Blob URLs
+                const newAssets = files.map(file => URL.createObjectURL(file));
+                localAssets = [...localAssets, ...newAssets];
                 
-                localAssets = [...localAssets, ...results];
-                
-                // Create new row
+                // Add a new file input row for the next set of images
                 const next = document.createElement('input');
                 next.type = 'file'; next.className = 'file-input-row'; next.accept = 'image/*'; next.multiple = true;
                 initFileInput(next);
@@ -190,8 +173,9 @@
 
         // ASSET MANAGEMENT
         function clearLocalAssets() {
-            currentImages = [];
+            localAssets.forEach(url => URL.revokeObjectURL(url));
             localAssets = [];
+            currentImages = [];
             document.getElementById('file-input-container').innerHTML = '<input type="file" class="file-input-row" accept="image/*" multiple>';
             document.getElementById('fileInput').value = "";
             initFileInput(document.querySelector('.file-input-row'));
