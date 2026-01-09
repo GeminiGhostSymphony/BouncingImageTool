@@ -25,14 +25,15 @@
 
         /* --- MODULAR INTERFACE --- */
         #setup-ui { min-height: 100vh; padding: 40px; display: none; box-sizing: border-box;; }
-        .bento-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+        .bento-grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
         .card { background: var(--card); padding: 24px; border-radius: 16px; border: 1px solid #333; transition: border-color 0.2s ease; }
         .card:hover { border-color: var(--accent); }
-        .header-card { grid-column: span 2; padding: 16px 24px; display: flex; flex-direction: column; justify-content: center; min-height: auto; }
+        .full-width { grid-column: span 3; }
+        .header-card { padding: 15px 25px; min-height: auto; }
         h1, h3 { color: var(--accent); margin-top: 0; letter-spacing: -0.5px; }
-        h1 { font-size: 1.8em; margin-bottom: 5px; }
-        label { display: block; font-weight: 600; margin-bottom: 4px; color: var(--muted); font-size: 0.8em; text-transform: uppercase; }
-        .help-label { font-size: 0.75em; color: var(--muted); margin-bottom: 12px; display: block; line-height: 1.4; }
+        h1 { font-size: 1.6em; margin-bottom: 5px; }
+        h3 { font-size: 1.1em; margin-bottom: 15px; }
+        label { display: block; font-weight: 600; margin-bottom: 4px; color: var(--muted); font-size: 0.75em; text-transform: uppercase; }
 
         /* --- INTERACTIVE INPUTS --- */
         input, select, textarea, button { padding: 14px; width: 100%; border-radius: 10px; border: 1px solid #444; background: #252525; color: white; margin-bottom: 12px; box-sizing: border-box; font-size: 14px; }
@@ -60,7 +61,7 @@
     <!-- UI: SETUP INTERFACE -->
     <div id="setup-ui">
         <div class="bento-grid">
-            <div class="card header-card">
+            <div class="card header-card full-width">
                 <h1>Bouncing Image Generator (DVD Logo Style)</h1>
                 <p style="color: var(--muted); font-size: 0.9em; margin: 0;">Free GIF & streaming overlay generator by GeminiGhostSymphony.</p>
             </div>
@@ -150,15 +151,27 @@
         function initFileInput(el) {
             el.addEventListener('change', async (e) => {
                 const files = Array.from(e.target.files);
-                if (files.length === 0) return;
+                if (!files.length) return;
                 
-                const loaders = files.map(file => new Promise(resolve => {
+                const results = await Promise.all(files.map(file => new Promise(resolve => {
                     const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result);
+                    reader.onload = (event) => {
+                        const tempImg = new Image();
+                        tempImg.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const max = 300; // COMPRESSION
+                            let w = tempImg.width, h = tempImg.height;
+                            if (w > h) { if (w > max) { h *= max/w; w = max; } }
+                            else { if (h > max) { w *= max/h; h = max; } }
+                            canvas.width = w; canvas.height = h;
+                            canvas.getContext('2d').drawImage(tempImg, 0, 0, w, h);
+                            resolve(canvas.toDataURL('image/webp', 0.7));
+                        };
+                        tempImg.src = event.target.result;
+                    };
                     reader.readAsDataURL(file);
-                }));
+                })));
                 
-                const results = await Promise.all(loaders);
                 localAssets = [...localAssets, ...results];
                 
                 // Create new row
@@ -174,6 +187,7 @@
         // ASSET MANAGEMENT
         function clearLocalAssets() {
             currentImages = [];
+            localAssets = [];
             document.getElementById('file-input-container').innerHTML = '<input type="file" class="file-input-row" accept="image/*" multiple>';
             document.getElementById('fileInput').value = "";
             initFileInput(document.querySelector('.file-input-row'));
@@ -203,7 +217,7 @@
             const finalUrl = `${window.location.origin}${window.location.pathname}?imgs=${settings.imgs}&v=${settings.v}&e=${settings.e}&t=${settings.t}`;
             document.getElementById('generated-url').innerText = finalUrl;
             document.getElementById('urlCount').innerText = finalUrl.length;
-            document.getElementById('lenWarning').style.display = finalUrl.length > 2048 ? 'block' : 'none';
+            document.getElementById('lenWarning').style.display = finalUrl.length > 4000 ? 'block' : 'none';
             document.getElementById('generated-css').innerText = `body { background: transparent; overflow: hidden; margin: 0; }\n#bouncing-image { will-change: transform; transform-origin: top left; }`;
             document.getElementById('results-area').style.display = 'block';
             document.getElementById('preview-msg').style.display = 'none';
