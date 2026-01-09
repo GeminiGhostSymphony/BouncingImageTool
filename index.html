@@ -309,10 +309,10 @@
                     let x = 40, y = 40, dx = 1, dy = 1;
                     const delay = 20; 
                     const dt = delay / 1000; // 0.03 seconds per frame
-                    const totalFrames = 150;
+                    const totalFrames = 200;
                     
-                    const velocity = (baseSpeed / 10) * (800 / 100);
                     for (let i = 0; i < totalFrames; i++) {
+                        ctx.save();
                         ctx.fillStyle = document.getElementById('gifBg').value; 
                         ctx.fillRect(0,0,800,600);
                         
@@ -323,8 +323,11 @@
                         
                         if (x + 100 >= 800) { dx = -1; x = 700; } else if (x <= 0) { dx = 1; x = 0; }
                         if (y + 100 >= 600) { dy = -1; y = 500; } else if (y <= 0) { dy = 1; y = 0; }
-                        
+
+                        ctx.traanslate(x, y);
                         ctx.drawImage(logo, x, y, 100, 100);
+
+                        ctx.restore();
                         gif.addFrame(ctx, { copy: true, delay: delay });
                     }
                     gif.on('finished', (blob) => {
@@ -407,7 +410,7 @@
                     }
                 }
                 
-                targetImg.style.transform = `translate3d(${x}px, ${y}px, 0.01px)`;
+                targetImg.style.transform = `translate3d(${x.toFixed(3)}px, ${y.toFixed(3)}px, 0.001px)`;
                 animationId = requestAnimationFrame(animate);
             }
         
