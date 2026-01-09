@@ -49,7 +49,6 @@
 
         /* --- GPU ANIMATIONS --- */
         #bouncing-image { position: absolute; display: none; pointer-events: none; will-change: transform; transform-origin: top left; }
-        .pixel-art { image-rendering: pixelated; }
         @keyframes shake { 0%, 100% { transform: translate(0,0); } 25% { transform: translate(4px,4px); } 50% { transform: translate(-4px,-4px); } }
         .shake-active { animation: shake 0.1s infinite !important; }
         .invert-active { filter: invert(1); }
@@ -164,13 +163,13 @@
                         const tempImg = new Image();
                         tempImg.onload = () => {
                             const canvas = document.createElement('canvas');
-                            const max = 200; // COMPRESSION
+                            const max = 180; // COMPRESSION
                             let w = tempImg.width, h = tempImg.height;
                             if (w > h) { if (w > max) { h *= max/w; w = max; } }
                             else { if (h > max) { w *= max/h; h = max; } }
                             canvas.width = w; canvas.height = h;
                             canvas.getContext('2d').drawImage(tempImg, 0, 0, w, h);
-                            resolve(canvas.toDataURL('image/webp', 0.6));
+                            resolve(canvas.toDataURL('image/webp', 0.25));
                         };
                         tempImg.src = event.target.result;
                     };
@@ -223,7 +222,7 @@
             document.getElementById('generated-url').innerText = finalUrl;
             document.getElementById('urlCount').innerText = finalUrl.length;
             document.getElementById('lenWarning').style.display = finalUrl.length > 4000 ? 'block' : 'none';
-            document.getElementById('generated-css').innerText = `body { background: transparent; overflow: hidden; margin: 0; }\n#bouncing-image { will-change: transform; transform-origin: top left; }`;
+            document.getElementById('generated-css').innerText = `body { background: transparent; overflow: hidden; margin: 0; }\n#bouncing-image { position: absolute; will-change: transform; transform-origin: top left; }\n.shake-active { animation: shake 0.1s infinite !important; }\n.invert-active { filter: invert(1); }\n.zoom-active { transform: scale(1.4) !important; transition: transform 0.1s ease-out; }\n@keyframes shake { 0%, 100% { transform: translate(0,0); } 25% { transform: translate(4px,4px); } 50% { transform: translate(-4px,-4px); } }`;
             document.getElementById('results-area').style.display = 'block';
             document.getElementById('preview-msg').style.display = 'none';
 
@@ -321,7 +320,7 @@
                 if ((hX || hY) && images.length > 1) {
                     const timeDiff = Date.now() - lastSw;
                     if (swap === 0 || (timeDiff >= swap)) {
-                        currentIdx = (currentIdx + 1) % images.length;
+                        idx = (idx + 1) % images.length;
                         targetImg.src = images[idx];
                         lastSw = Date.now();
                     }
@@ -329,7 +328,12 @@
                 targetImg.style.transform = `translate3d(${x}px, ${y}px, 0)`;
                 animationId = requestAnimationFrame(animate);
             }
-            targetImg.onload = () => { lastFrameTime = performance.now(); animationId = requestAnimationFrame(animate); };
+            targetImg.onload = () => { 
+                lastFrameTime = performance.now(); 
+                targetImg.style.display = 'block';
+                animationId = requestAnimationFrame(animate); 
+            };
+            targetImg.src = images[idx]
             
             // RE-CENTER FOR RESIZING
             if (!isPreview) window.addEventListener('resize', () => { x = 20; y = 20; });
