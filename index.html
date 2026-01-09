@@ -42,6 +42,8 @@
         button { background: var(--accent); color: #000; font-weight: 800; border: none; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
         button:hover { background: #fff; transform: scale(1.02); }
         .download-btn { background: var(--success); color: white; margin-top: 5px; }
+        .upload-row { display: flex; align-items: center; justify-content: space-between; background: #252525; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #444; font-size: 0.85em; }
+        .del-btn { width: auto !important; padding: 4px 10px !important; margin: 0 !important; background: var(--err) !important; color: white !important; font-size: 11px !important; }
 
         /* PREVIEW & OUTPUT */
         #preview-window { border: 2px dashed #444; border-radius: 16px; height: 320px; position: relative; overflow: hidden; background: #000; }
@@ -153,17 +155,43 @@
                 document.getElementById(id).addEventListener('input', generateContent);
             });
             initFileInput(document.querySelector('.file-input-row'));
+            document.getElementById('urlInput').addEventListener('input', generateContent);
+            document.getElementById('imgSpeed').addEventListener('input', generateContent);
+            document.getElementById('switchTime').addEventListener('input', generateContent);
+            document.getElementById('effectType').addEventListener('input', generateContent);
         }
 
         function initFileInput(el) {
             el.addEventListener('change', (e) => {
                 const files = Array.from(e.target.files);
                 if (files.length > 0) {
-                    // Store every selected file as a temporary Blob URL
-                    const newUrls = files.map(f => URL.createObjectURL(f));
-                    localAssets = [...localAssets, ...newUrls];
+                    // Create a unique group for these specific blobs
+                    const blobGroup = files.map(f => URL.createObjectURL(f));
+                    localAssets = [...localAssets, ...blobGroup];
                     
-                    // Create a fresh row for the next batch of uploads
+                    // Create a UI wrapper for the delete button
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'upload-row';
+                    wrapper.innerHTML = `<span>Uploaded ${files.length} image(s)</span>`;
+                    
+                    const delBtn = document.createElement('button');
+                    delBtn.innerText = "Delete";
+                    delBtn.className = "del-btn";
+                    delBtn.onclick = () => {
+                        // Remove these specific blobs from the global list
+                        localAssets = localAssets.filter(asset => !blobGroup.includes(asset));
+                        blobGroup.forEach(url => URL.revokeObjectURL(url));
+                        wrapper.remove();
+                        generateContent();
+                    };
+                    
+                    wrapper.appendChild(delBtn);
+                    el.parentElement.insertBefore(wrapper, el);
+                    
+                    // Hide the used input so they can't re-upload in the same slot
+                    el.style.display = 'none';
+        
+                    // Create the next fresh input row
                     const next = document.createElement('input');
                     next.type = 'file'; next.className = 'file-input-row'; 
                     next.accept = 'image/*'; next.multiple = true;
@@ -178,15 +206,11 @@
         // ASSET MANAGEMENT
         function clearLocalAssets() {
             localAssets.forEach(url => URL.revokeObjectURL(url));
-            localAssets = [];
-            currentImages = [];
-            const fileInputContainer = document.getElementById('file-input-container');
-            fileInputContainer.innerHTML = '';
-            const newInput = document.createElement('input');
-            newInput.type = 'file'; newInput.className = 'file-input-row'; newInput.accept = 'image/*'; newInput.multiple = true;
-            fileInputContainer.appendChild(newInput);
-            initFileInput(newInput);
-            generateContent();
+            localAssets = []; 
+            const container = document.getElementById('file-input-container');
+            container.innerHTML = '<input type="file" class="file-input-row" accept="image/*" multiple>';
+            initFileInput(container.querySelector('input'));
+            generateContent(); // Restart preview
         }
 
         // GENERATOR LOGIC
@@ -248,13 +272,13 @@
                 const workerUrl = URL.createObjectURL(workerBlob);
     
                 const gif = new GIF({ 
-                    workers: 4, quality: 1, width: 600, height: 400, 
+                    workers: 4, quality: 1, width: 800, height: 600, 
                     workerScript: workerUrl, dither: 'FloydSteinberg'
                 });
     
                 const tempCanvas = document.createElement('canvas');
                 const ctx = tempCanvas.getContext('2d');
-                tempCanvas.width = 400; tempCanvas.height = 300;
+                tempCanvas.width = 800; tempCanvas.height = 600;
     
                 const logo = new Image(); logo.crossOrigin = "Anonymous"; logo.src = currentImages[0];
     
