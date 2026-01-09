@@ -113,7 +113,7 @@
             </div>
 
             <!-- PREVIEW & EXPORT -->
-            <div class="card" class="full-width">
+            <div class="card full-width">
                 <h3>Preview & Stream Export</h3>
                 <div id="preview-window"><div id="preview-msg" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#444;">Add an image to begin preview.</div></div>
                 <button onclick="generateContent()" style="margin-top:20px;">Generate/Update Stream Overlay Package</button>
@@ -121,9 +121,11 @@
                     <div id="lenWarning" class="url-warning">⚠️ URL too long! Use Web URLs instead of file uploads or use "Download Launcher" button below.</div>
                     <label>Browser Source URL (Length: <span id="urlCount">0</span>)</label>
                     <div id="generated-url" class="output-box" onclick="copyText(this)"></div>
+                    <small style="color: var(--muted); display: block; margin-top: -5px; margin-bottom: 15px;">(Click box above to copy URL to clipboard)</small>
                     <label>Dynamic Custom CSS</label>
                     <div id="generated-css" class="output-box" onclick="copyText(this)"></div>
                     <button class="download-btn" onclick="downloadFile()">Download Launcher HTML</button>
+                    <small style="color: var(--muted); display: block; margin-top: -5px; margin-bottom: 15px;">(Click box above to copy URL to clipboard)</small>
                 </div>
             </div>
         </div>
@@ -155,19 +157,20 @@
         function initFileInput(el) {
             el.addEventListener('change', (e) => {
                 const files = Array.from(e.target.files);
-                if (!files.length) return;
-                
-                // Create temporary Blob URLs
-                const newAssets = files.map(file => URL.createObjectURL(file));
-                localAssets = [...localAssets, ...newAssets];
-                
-                // Add a new file input row for the next set of images
-                const next = document.createElement('input');
-                next.type = 'file'; next.className = 'file-input-row'; next.accept = 'image/*'; next.multiple = true;
-                initFileInput(next);
-                document.getElementById('file-input-container').appendChild(next);
-                
-                generateContent();
+                if (files.length > 0) {
+                    // Store every selected file as a temporary Blob URL
+                    const newUrls = files.map(f => URL.createObjectURL(f));
+                    localAssets = [...localAssets, ...newUrls];
+                    
+                    // Create a fresh row for the next batch of uploads
+                    const next = document.createElement('input');
+                    next.type = 'file'; next.className = 'file-input-row'; 
+                    next.accept = 'image/*'; next.multiple = true;
+                    initFileInput(next); 
+                    document.getElementById('file-input-container').appendChild(next);
+                    
+                    generateContent();
+                }
             });
         }
 
