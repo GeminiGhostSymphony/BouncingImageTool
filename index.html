@@ -307,9 +307,12 @@
     
                 logo.onload = () => {
                     let x = 40, y = 40, dx = 1, dy = 1;
-                    const dt = 0.06; // 0.06 seconds per frame
+                    const delay = 30; 
+                    const dt = delay / 1000; // 0.03 seconds per frame
+                    const totalFrames = 120;
+                    
                     const velocity = (baseSpeed / 10) * (800 / 100);
-                    for (let i = 0; i < 60; i++) {
+                    for (let i = 0; i < totalFrames; i++) {
                         ctx.fillStyle = document.getElementById('gifBg').value; ctx.fillRect(0,0,800,600);
                         if (velocity > 0) {
                             x += dx * velocity * dt * 10;
@@ -349,12 +352,6 @@
             const effect = settings?.e || params.get('e');
             const swap = parseInt(settings?.t || params.get('t')) || 0;
 
-            const rawSpeed = isPreview 
-                ? (parseFloat(document.getElementById('imgSpeed').value)) 
-                : (parseFloat(params.get('v')));
-            
-            const baseSpeed = isNaN(rawSpeed) ? 180 : rawSpeed;
-
             let x = 20, y = 20, dx = 1, dy = 1, idx = 0, slow = false, lastSw = Date.now();
             targetImg.crossOrigin = "anonymous";
             targetImg.style.display = 'block';
@@ -373,6 +370,12 @@
                 const h = isPreview ? container.clientHeight : window.innerHeight;
                 const iw = targetImg.clientWidth || 80;
                 const ih = targetImg.clientHeight || 80;
+
+                const rawSpeed = isPreview 
+                    ? (parseFloat(document.getElementById('imgSpeed').value)) 
+                    : (parseFloat(params.get('v')));
+                
+                const baseSpeed = isNaN(rawSpeed) ? 180 : rawSpeed;
 
                 const velocity = baseSpeed * (w / 1000); 
 
