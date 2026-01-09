@@ -68,8 +68,8 @@
                 <label>Image URLs (one per line)</label>
                 <textarea id="urlInput" rows="2" placeholder="Paste URLs here..."></textarea>
                 <label>Upload Images</label>
-                <div id="file-inputs">
-                    <input type="file" id="fileInput" accept="image/*" multiple>
+                <div id="file-input-container">
+                    <input type="file" class="file-input-row" accept="image/*" multiple>
                 </div>
                 <button class="clear-btn" onclick="clearLocalAssets()">Clear All Local Uploads</button>
             </div>
@@ -141,7 +141,31 @@
             ['urlInput', 'imgSpeed', 'switchTime', 'effectType'].forEach(id => {
                 document.getElementById(id).addEventListener('input', generateContent);
             });
-            document.getElementById('fileInput').addEventListener('change', generateContent);
+            initFileInput(document.querySelector('.file-input-row'));
+        }
+
+        function initFileInput(el) {
+            el.addEventListener('change', async (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length === 0) return;
+                
+                const loaders = files.map(file => new Promise(resolve => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.readAsDataURL(file);
+                }));
+                
+                const results = await Promise.all(loaders);
+                localAssets = [...localAssets, ...results];
+                
+                // Create new row
+                const next = document.createElement('input');
+                next.type = 'file'; next.className = 'file-input-row'; next.accept = 'image/*'; next.multiple = true;
+                initFileInput(next);
+                document.getElementById('file-input-container').appendChild(next);
+                
+                generateContent();
+            });
         }
 
         // ASSET MANAGEMENT
@@ -153,16 +177,7 @@
 
         // GENERATOR LOGIC
         async function generateContent() {
-            const files = document.getElementById('fileInput').files;
             const webUrls = document.getElementById('urlInput').value.split('\n').filter(u => u.trim() !== "");
-
-            if (files.length > 0) {
-                const newData = await Promise.all(Array.from(files).map(f => new Promise(res => {
-                    const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(f);
-                })));
-                localAssets = [...localAssets, ...newData];
-                document.getElementById('fileInput').value = "";
-            }
 
             currentImages = [...localAssets, ...webUrls];
             if (!currentImages.length) {
@@ -186,9 +201,8 @@
             document.getElementById('results-area').style.display = 'block';
             document.getElementById('preview-msg').style.display = 'none';
 
-            const previewBox = document.getElementById('preview-window');
             if (!document.getElementById('preview-img')) {
-                previewBox.innerHTML = '<img id="preview-img" style="position:absolute; width:60px; will-change:transform; transform-origin: top left;">';
+                document.getElementById('preview-window').innerHTML = '<img id="preview-img" style="position:absolute; width:60px; will-change:transform; transform-origin: top left;">';
             }
 
             startLiveMode(true, settings, currentImages);
