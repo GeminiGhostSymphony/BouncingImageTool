@@ -307,14 +307,14 @@
     
                 logo.onload = () => {
                     let x = 40, y = 40, dx = 1, dy = 1;
-                    const delay = 30; 
+                    const delay = 20; 
                     const dt = delay / 1000; // 0.03 seconds per frame
-                    const totalFrames = 120;
+                    const totalFrames = 150;
                     
                     const velocity = (baseSpeed / 10) * (800 / 100);
                     for (let i = 0; i < totalFrames; i++) {
                         ctx.fillStyle = document.getElementById('gifBg').value; ctx.fillRect(0,0,800,600);
-                        if (velocity > 0) {
+                        if (baseSpeed > 0) {
                             x += dx * velocity * dt * 10;
                             y += dy * velocity * dt * 10;
                         }
@@ -322,15 +322,16 @@
                         if (x + 100 >= 800) { dx = -1; x = 700; } else if (x <= 0) { dx = 1; x = 0; }
                         if (y + 100 >= 600) { dy = -1; y = 500; } else if (y <= 0) { dy = 1; y = 0; }
                         
-                        ctx.drawImage(logo, x, y, 100, 100); gif.addFrame(ctx, { copy: true, delay: 60 });
+                        ctx.drawImage(logo, Math.round(x), Math.round(y), 100, 100);
+                        gif.addFrame(ctx, { copy: true, delay: delay });
                     }
                     gif.on('finished', (blob) => {
-                        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'bouncing-hq.gif'; a.click();
-                        btn.innerText = "Download HQ GIF"; btn.disabled = false;
+                        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'bouncing-image.gif'; a.click();
+                        btn.innerText = "Download GIF"; btn.disabled = false;
                     });
                     gif.render();
                 };
-            } catch (err) { alert("GIF Error: " + err); btn.innerText = "Download HQ GIF"; btn.disabled = false; }
+            } catch (err) { alert("GIF Error: " + err); btn.innerText = "Download GIF"; btn.disabled = false; }
         }
 
         // ANIMATION 
@@ -424,7 +425,7 @@
             
             targetImg.src = imgs[idx];
             
-            if (!isPreview) window.addEventListener('resize', () => { x = 20; y = 20; });
+            // if (!isPreview) window.addEventListener('resize', () => { x = 20; y = 20; });
         }
 
         // CELEBRATION TRIGGER
