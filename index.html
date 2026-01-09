@@ -296,7 +296,8 @@
                 tempCanvas.width = 800; tempCanvas.height = 600;
     
                 const logo = new Image(); logo.crossOrigin = "Anonymous"; logo.src = currentImages[0];
-                const speed = parseFloat(document.getElementById('imgSpeed').value) || 1;
+                const baseSpeed = parseFloat(document.getElementById('imgSpeed').value) || 1;
+                const speed = baseSpeed * (800 * 0.1); // Normalize speed
     
                 logo.onload = () => {
                     let x = 40, y = 40, dx = speed, dy = speed;
@@ -348,10 +349,12 @@
                 }
                 const dt = Math.min((now - lastFrameTime) / 1000, 0.1); // Cap dt to prevent jumps
                 lastFrameTime = now;
+
+                const baseSpeed = isPreview 
+                    ? (parseFloat(document.getElementById('imgSpeed').value) || 0) 
+                    : (parseFloat(params.get('v')) || 1);
                 
-                const speed = isPreview 
-                    ? (parseInt(document.getElementById('imgSpeed').value) || 0) 
-                    : (parseInt(params.get('v')) || 1);
+                const speed = baseSpeed * (w * 0.1); // Normalize speed to percentage screen width per second
                 
                 const w = isPreview ? container.clientWidth : window.innerWidth;
                 const h = isPreview ? container.clientHeight : window.innerHeight;
