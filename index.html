@@ -302,6 +302,18 @@
                 const logo = new Image(); logo.crossOrigin = "Anonymous"; logo.src = currentImages[0];
     
                 logo.onload = () => {
+
+                    const targetSize = 120; 
+                    const ratio = logo.naturalWidth / logo.naturalHeight;
+                    let iw, ih;
+        
+                    if (ratio > 1) {
+                        iw = targetSize;
+                        ih = targetSize / ratio;
+                    } else {
+                        ih = targetSize;
+                        iw = targetSize * ratio;
+                    }
                     
                     let x = 40, y = 40, dx = 1, dy = 1;
                     const delay = 30; 
@@ -323,12 +335,12 @@
                             y += dy * velocity * dt * 10;
                         }
                         
-                        if (x + 100 >= 800) { dx = -1; x = 700; } else if (x <= 0) { dx = 1; x = 0; }
-                        if (y + 100 >= 600) { dy = -1; y = 500; } else if (y <= 0) { dy = 1; y = 0; }
+                        if (x + iw >= 800) { dx = -1; x = 800 - iw; } else if (x <= 0) { dx = 1; x = 0; }
+                        if (y + ih >= 600) { dy = -1; y = 600 - ih; } else if (y <= 0) { dy = 1; y = 0; }
 
                         ctx.save();
                         ctx.translate(x, y);
-                        ctx.drawImage(logo, 0, 0, 100, 100);
+                        ctx.drawImage(logo, 0, 0, iw, ih);
                         ctx.restore();
                         
                         gif.addFrame(ctx, { copy: true, delay: delay });
