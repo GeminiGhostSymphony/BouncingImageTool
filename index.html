@@ -285,7 +285,7 @@
                 if (!response.ok) throw new Error("Worker fetch failed");
                 const workerCode = await response.blob();
                 // const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
-                const workerUrl = URL.createObjectURL(workerBlob);
+                const workerUrl = URL.createObjectURL(workerCode);
     
                 const gif = new GIF({ 
                     workers: 4, quality: 1, width: 800, height: 600, 
