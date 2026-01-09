@@ -362,7 +362,7 @@
 
                 const baseSetting = isPreview 
                     ? (parseFloat(document.getElementById('imgSpeed').value) || 0) 
-                    : (parseFloat(params.get('v')) || 0);
+                    : (parseFloat(params.get('v')) || 15);
                 
                 const currentVelocity = baseSetting * w * 0.1; 
 
