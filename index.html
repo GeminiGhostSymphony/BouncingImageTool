@@ -296,8 +296,8 @@
                 tempCanvas.width = 800; tempCanvas.height = 600;
     
                 const logo = new Image(); logo.crossOrigin = "Anonymous"; logo.src = currentImages[0];
-                const baseSpeed = parseFloat(document.getElementById('imgSpeed').value) || 1;
-                const gifVelocity = baseSpeed * 800 * 0.1; // Normalize speed
+                const basePPS = parseFloat(document.getElementById('imgSpeed').value) || 0;
+                const gifSpeed = basePPS * (800 / 1920); 
     
                 logo.onload = () => {
                     let x = 40, y = 40, dx = 1, dy = 1;
@@ -305,9 +305,9 @@
                     const dt = frameDelay/1000; // 0.06 seconds per frame
                     for (let i = 0; i < 60; i++) {
                         ctx.fillStyle = document.getElementById('gifBg').value; ctx.fillRect(0,0,800,600);
-                        if (gifVelocity > 0) {
-                            x += dx * gifVelocity * dt;
-                            y += dy * gifVelocity * dt;
+                        if (gifSpeed > 0) {
+                            x += dx * gifSpeed * dt * 10;
+                            y += dy * gifSpeed * dt * 10;
                         }
                         
                         if (x + 100 >= 800 || x <= 0) dx = -dx; if (y + 100 >= 600 || y <= 0) dy = -dy;
@@ -360,16 +360,16 @@
                 const iw = targetImg.clientWidth || 80;
                 const ih = targetImg.clientHeight || 80;
 
-                const baseSetting = isPreview 
+                const basePPS = isPreview 
                     ? (parseFloat(document.getElementById('imgSpeed').value) || 0) 
                     : (parseFloat(params.get('v')) || 15);
                 
-                const currentVelocity = baseSetting * w * 0.1; 
+                const currentSpeed = basePPS * (w / 1920);
 
-                if (currentVelocity > 0) {
-                    const slowMult = slow ? 0.2 : 1;
-                    x += dirX * currentVelocity * dt * slowMult;
-                    y += dirY * currentVelocity * dt * slowMult;
+                if (currentSpeed > 0) {
+                    const multiplier = slow ? 0.2 : 1;
+                    x += dx * currentVelocity * dt * 10 * multiplier;
+                    y += dy * currentVelocity * dt * 10 * multiplier;
                 }
                 
                 let hX = (x + iw >= w || x <= 0);
