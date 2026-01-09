@@ -10,20 +10,20 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js"></script>
     
     <style id="base-styles">
-        /* --- CSS CORE VARIABLES --- */
+        /* CSS CORE VARIABLES */
         :root { 
             --accent: #00d4ff; --bg: #121212; --card: #1e1e1e; 
             --text: #e0e0e0; --muted: #888; --success: #28a745; --err: #ff4444; 
         }
 
-        /* --- BASE LAYOUT --- */
+        /* BASE LAYOUT */
         html, body { 
             height: 100%; width: 100%; margin: 0; padding: 0;
             background-color: var(--bg); overflow-y: auto; 
             font-family: 'Inter', system-ui, sans-serif; color: var(--text); 
         }
 
-        /* --- MODULAR INTERFACE --- */
+        /* MODULAR INTERFACE */
         #setup-ui { min-height: 100vh; padding: 40px; display: none; box-sizing: border-box;; }
         .bento-grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
         .card { background: var(--card); padding: 24px; border-radius: 16px; border: 1px solid #333; transition: border-color 0.2s ease; }
@@ -35,19 +35,19 @@
         h3 { font-size: 1.1em; margin-bottom: 15px; }
         label { display: block; font-weight: 600; margin-bottom: 4px; color: var(--muted); font-size: 0.75em; text-transform: uppercase; }
 
-        /* --- INTERACTIVE INPUTS --- */
+        /* INTERACTIVE INPUTS */
         input, select, textarea, button { padding: 14px; width: 100%; border-radius: 10px; border: 1px solid #444; background: #252525; color: white; margin-bottom: 12px; box-sizing: border-box; font-size: 14px; }
         button { background: var(--accent); color: #000; font-weight: 800; border: none; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
         button:hover { background: #fff; transform: scale(1.02); }
         .clear-btn { background:  var(--success); color: white; margin-top: 5px; font-size: 11px; padding: 8px;}
         .download-btn { background: var(--success); color: white; margin-top: 5px; }
 
-        /* --- PREVIEW & OUTPUT --- */
+        /* PREVIEW & OUTPUT */
         #preview-window { border: 2px dashed #444; border-radius: 16px; height: 320px; position: relative; overflow: hidden; background: #000; }
         .output-box { background: #000; color: #00ff41; padding: 12px; border-radius: 10px; font-family: monospace; word-break: break-all; border: 1px solid #333; max-height: 80px; overflow-y: auto; font-size: 0.75em; margin-bottom: 15px; cursor: copy; }
         .url-warning { color: var(--err); font-size: 0.8em; margin-top: -10px; margin-bottom: 10px; display: none; line-height: 1.4; }
 
-        /* --- GPU ANIMATIONS --- */
+        /* GPU ANIMATIONS */
         #bouncing-image { position: absolute; display: none; pointer-events: none; will-change: transform; transform-origin: top left; }
         @keyframes shake { 0%, 100% { transform: translate(0,0); } 25% { transform: translate(4px,4px); } 50% { transform: translate(-4px,-4px); } }
         .shake-active { animation: shake 0.1s infinite !important; }
@@ -304,42 +304,48 @@
             let x = 20, y = 20, dx = speed, dy = speed, idx = 0, slow = false, lastSw = Date.now();
             targetImg.crossOrigin = "anonymous";
             targetImg.style.display = 'block';
-            targetImg.src = images[idx];
+            targetImg.src = imgs[idx];
 
-            function animate(now) {
-                const dt = (now - lastFrameTime) / 1000;
-                lastFrameTime = now;
-                const w = isPreview ? container.clientWidth : container.innerWidth;
-                const h = isPreview ? container.clientHeight : container.innerHeight;
-                const iw = targetImg.clientWidth || 60; 
-                const ih = targetImg.clientHeight || 60;
-
-                x += dx * dt * (slow ? 0.2 : 1); y += dy * dt * (slow ? 0.2 : 1);
-
-                let hX = (x + iw >= w || x <= 0);
-                let hY = (y + ih >= h || y <= 0);
-
-                if (hX && hY) triggerCelebration(effect, isPreview ? container : document.body, targetImg, (s) => slow = s);
-
-                // COLLISION BUFFER
-                if (hX) { dx = -dx; x = Math.max(0, Math.min(x, w - iw)); }
-                if (hY) { dy = -dy; y = Math.max(0, Math.min(y, h - ih)); }
-
-                if ((hX || hY) && images.length > 1) {
-                    const timeDiff = Date.now() - lastSw;
-                    if (swap === 0 || (timeDiff >= swap)) {
-                        idx = (idx + 1) % images.length;
-                        targetImg.src = images[idx];
-                        lastSw = Date.now();
+            function runAnimation() {
+                function animate(now) {
+                    const dt = (now - lastFrameTime) / 1000;
+                    lastFrameTime = now;
+                    const w = isPreview ? container.clientWidth : container.innerWidth;
+                    const h = isPreview ? container.clientHeight : container.innerHeight;
+                    const iw = targetImg.clientWidth || 60; 
+                    const ih = targetImg.clientHeight || 60;
+    
+                    x += dx * dt * (slow ? 0.2 : 1); y += dy * dt * (slow ? 0.2 : 1);
+    
+                    let hX = (x + iw >= w || x <= 0);
+                    let hY = (y + ih >= h || y <= 0);
+    
+                    if (hX && hY) triggerCelebration(effect, isPreview ? container : document.body, targetImg, (s) => slow = s);
+    
+                    // COLLISION BUFFER
+                    if (hX) { dx = -dx; x = Math.max(0, Math.min(x, w - iw)); }
+                    if (hY) { dy = -dy; y = Math.max(0, Math.min(y, h - ih)); }
+    
+                    if ((hX || hY) && imgs.length > 1) {
+                        const timeDiff = Date.now() - lastSw;
+                        if (swap === 0 || (timeDiff >= swap)) {
+                            idx = (idx + 1) % imgs.length;
+                            targetImg.src = imgs[idx];
+                            lastSw = Date.now();
+                        }
                     }
+                    targetImg.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+                    animationId = requestAnimationFrame(animate);
                 }
-                targetImg.style.transform = `translate3d(${x}px, ${y}px, 0)`;
-                animationId = requestAnimationFrame(animate);
+                lastFrameTime = performance.now(); 
+                animationId = requestAnimationFrame(animate); 
             }
-            lastFrameTime = performance.now(); 
-            animationId = requestAnimationFrame(animate); 
-            };
-            targetImg.src = images[idx]
+
+            if (targetImg.complete && targetImg.naturalWidth !== 0) {
+                runAnimation();
+            } else {
+                targetImg.onload = runAnimation;
+            }
             
             // RE-CENTER FOR RESIZING
             if (!isPreview) window.addEventListener('resize', () => { x = 20; y = 20; });
