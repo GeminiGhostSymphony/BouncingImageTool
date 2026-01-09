@@ -37,6 +37,7 @@
 
         /* INTERACTIVE INPUTS */
         input, select, textarea, button { padding: 14px; width: 100%; border-radius: 10px; border: 1px solid #444; background: #252525; color: white; margin-bottom: 12px; box-sizing: border-box; font-size: 14px; }
+        input[type="color"] { height: 45px; padding: 2px; }
         button { background: var(--accent); color: #000; font-weight: 800; border: none; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
         button:hover { background: #fff; transform: scale(1.02); }
         .download-btn { background: var(--success); color: white; margin-top: 5px; }
@@ -312,15 +313,16 @@
                     if (hX) { dx = -dx; x = Math.max(0, Math.min(x, w - iw)); }
                     if (hY) { dy = -dy; y = Math.max(0, Math.min(y, h - ih)); }
 
+                    const currentSwapValue = parseFloat(document.getElementById('switchTime').value) || 0;
                     const timeDiff = (Date.now() - lastSw) / 1000; // Seconds conversion
-                    if (swap === 0) {
+                    if (currentSwapValue === 0) {
                         // Mode 0: Swap only on wall hits
                         if ((hX || hY) && imgs.length > 1) {
                             idx = (idx + 1) % imgs.length;
                             targetImg.src = imgs[idx];
                             lastSw = Date.now();
                         }
-                    } else if (timeDiff >= swap && imgs.length > 1) {
+                    } else if (timeDiff >= currentSwapValue && imgs.length > 1) {
                         // Mode > 0: Swap based on timer regardless of hits
                         idx = (idx + 1) % imgs.length;
                         targetImg.src = imgs[idx];
