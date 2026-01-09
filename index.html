@@ -396,7 +396,7 @@
                     }
 
                     const targetSize = 120; 
-                    const ratio = logo.naturalWidth / logo.naturalHeight;
+                    const ratio = currentLogo.naturalWidth / currentLogo.naturalHeight;
                     let iw = ratio > 1 ? targetSize : targetSize * ratio;
                     let ih = ratio > 1 ? targetSize / ratio : targetSize;
                     
@@ -413,7 +413,7 @@
 
                     ctx.save();
                     ctx.translate(x, y);
-                    ctx.drawImage(logo, 0, 0, iw, ih);
+                    ctx.drawImage(currentLogo, 0, 0, iw, ih);
                     ctx.restore();
                     
                     gif.addFrame(ctx, { copy: true, delay: delay });
