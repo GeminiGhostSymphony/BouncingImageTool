@@ -197,6 +197,12 @@
                         localAssets = localAssets.filter(asset => !blobGroup.includes(asset));
                         blobGroup.forEach(url => URL.revokeObjectURL(url));
                         wrapper.remove();
+                        currentImages = [...localAssets];
+                        if (currentImages.length === 0) {
+                            if (animationId) cancelAnimationFrame(animationId);
+                            const targetImg = document.getElementById('preview-img');
+                            if (targetImg) targetImg.style.display = 'none';
+                        }
                         generateContent();
                     };
                     
@@ -212,7 +218,8 @@
                     next.accept = 'image/*'; next.multiple = true;
                     initFileInput(next); 
                     document.getElementById('file-input-container').appendChild(next);
-                    
+
+                    currentImages = [...localAssets];
                     generateContent();
                 }
             });
@@ -222,6 +229,12 @@
         function clearLocalAssets() {
             localAssets.forEach(url => URL.revokeObjectURL(url));
             localAssets = []; 
+            currentImages = [];
+
+            if (animationId) cancelAnimationFrame(animationId);
+            const targetImg = document.getElementById('preview-img');
+            if (targetImg) targetImg.style.display = 'none';
+            
             const container = document.getElementById('file-input-container');
             container.innerHTML = '<input type="file" class="file-input-row" accept="image/*" multiple>';
             initFileInput(container.querySelector('input'));
@@ -274,6 +287,7 @@
         async function exportToGif() {
             if (!currentImages.length) return alert("Add images first.");
             const btn = document.getElementById('gifBtn');
+            const originalText = "Download GIF";
             btn.innerText = "Encoding..."; btn.disabled = true;
 
             const duration = Math.min(document.getElementById('gifDuration').value, 10);
