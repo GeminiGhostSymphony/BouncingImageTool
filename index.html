@@ -300,11 +300,6 @@
                 ctx.imageSmoothingQuality = 'high';
     
                 const logo = new Image(); logo.crossOrigin = "Anonymous"; logo.src = currentImages[0];
-
-                const rawSpeed = parseFloat(document.getElementById('imgSpeed').value);
-                const baseSpeed = isNaN(rawSpeed) ? 15 : rawSpeed;
-
-                const velocity = baseSpeed * (800 / 1000);
     
                 logo.onload = () => {
                     let x = 40, y = 40, dx = 1, dy = 1;
@@ -313,6 +308,11 @@
                     const totalFrames = 80;
                     
                     for (let i = 0; i < totalFrames; i++) {
+                        const rawSpeed = parseFloat(document.getElementById('imgSpeed').value);
+                        const baseSpeed = isNaN(rawSpeed) ? 15 : rawSpeed;
+        
+                        const velocity = baseSpeed * (800 / 1000);
+                        
                         ctx.save();
                         ctx.fillStyle = document.getElementById('gifBg').value; 
                         ctx.fillRect(0,0,800,600);
@@ -332,21 +332,14 @@
                         gif.addFrame(ctx, { copy: true, delay: delay });
                     }
 
-                    const renderTask = new Promise((resolve, reject) => {
-                        gif.on('finished', resolve);
-                        const timer = setTimeout(() => reject(new Error("Timeout")), 30000);
-                        gif.render();
-                    });
-        
-                    renderTask.then((blob) => {
+                    gif.on('finished', (blob) => {
                         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); 
                         a.download = 'image-bounce.gif'; a.click();
-                    }).catch((err) => {
-                        alert("GIF Error: Export took too long and timed out.");
-                    }).finally(() => {
                         URL.revokeObjectURL(workerUrl); 
                         btn.innerText = originalText; btn.disabled = false;
                     });
+                    
+                    gif.render();
                 };
             } catch (err) { alert("GIF Error: " + err); btn.innerText = "Download GIF"; btn.disabled = false; }
         }
