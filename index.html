@@ -288,7 +288,7 @@
                 const workerUrl = URL.createObjectURL(workerCode);
     
                 const gif = new GIF({ 
-                    workers: 4, quality: 30, width: 800, height: 600, 
+                    workers: 2, quality: 20, width: 800, height: 600, 
                     workerScript: workerUrl, dither: false
                 });
     
@@ -305,7 +305,14 @@
                     let x = 40, y = 40, dx = 1, dy = 1;
                     const delay = 25; 
                     const dt = delay / 1000; // 0.03 seconds per frame
-                    const totalFrames = 80;
+                    const totalFrames = 100;
+
+                    gif.on('finished', (blob) => {
+                        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); 
+                        a.download = 'image-bounce.gif'; a.click();
+                        URL.revokeObjectURL(workerUrl); 
+                        btn.innerText = originalText; btn.disabled = false;
+                    });
                     
                     for (let i = 0; i < totalFrames; i++) {
                         const rawSpeed = parseFloat(document.getElementById('imgSpeed').value);
@@ -331,13 +338,6 @@
                         ctx.restore();
                         gif.addFrame(ctx, { copy: true, delay: delay });
                     }
-
-                    gif.on('finished', (blob) => {
-                        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); 
-                        a.download = 'image-bounce.gif'; a.click();
-                        URL.revokeObjectURL(workerUrl); 
-                        btn.innerText = originalText; btn.disabled = false;
-                    });
                     
                     gif.render();
                 };
