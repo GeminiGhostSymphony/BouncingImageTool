@@ -302,7 +302,10 @@
         // ANIMATION 
         function startLiveMode(isPreview, settings = null, imagesArr = null) {
             // Cancel any existing animation to prevent overlap
-            if (animationId) cancelAnimationFrame(animationId);
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
             
             const targetImg = isPreview ? document.getElementById('preview-img') : img;
             
@@ -320,7 +323,10 @@
             targetImg.src = imgs[idx];
 
             function animate(now) {
-                const dt = (now - lastFrameTime) / 1000; lastFrameTime = now;
+                if (!lastFrameTime) lastFrameTime = now;
+                const dt = Math.min((now - lastFrameTime) / 1000, 0.1); // Cap dt to prevent jumps
+                lastFrameTime = now;
+                
                 const speed = isPreview ? (parseInt(document.getElementById('imgSpeed').value) || 180) : (parseInt(params.get('v')) || 180);
                 const w = isPreview ? container.clientWidth : window.innerWidth;
                 const h = isPreview ? container.clientHeight : window.innerHeight;
@@ -330,8 +336,11 @@
                 x += dx * speed * dt * (slow ? 0.2 : 1);
                 y += dy * speed * dt * (slow ? 0.2 : 1);
                 
-                let hX = (x + iw >= w || x <= 0), hY = (y + ih >= h || y <= 0);
+                let hX = (x + iw >= w || x <= 0);
+                let hY = (y + ih >= h || y <= 0);
+                
                 if (hX && hY) triggerCelebration(effect, isPreview ? container : document.body, targetImg, (s) => slow = s);
+                
                 if (hX) { dx = -dx; x = Math.max(0, Math.min(x, w - iw)); }
                 if (hY) { dy = -dy; y = Math.max(0, Math.min(y, h - ih)); }
         
