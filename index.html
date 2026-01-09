@@ -68,8 +68,10 @@
                 <label>Image URLs (one per line)</label>
                 <textarea id="urlInput" rows="2" placeholder="https://example.com/logo.png"></textarea>
                 <label>Upload Images</label>
-                <input type="file" class="local-file-input" accept="image/*" multiple>
-                <button class="clear-btn" onclick="clearLocalAssets()">Clear All Local Assets</button>
+                <div id="file-input-wrapper">
+                    <input type="file" class="local-file-input" accept="image/*" multiple>
+                </div>
+                <button class="clear-btn" onclick="clearLocalAssets()">Clear All Local Uploads</button>
             </div>
 
             <!-- BEHAVIOR -->
@@ -139,14 +141,38 @@
             ['urlInput', 'imgSpeed', 'switchTime', 'effectType'].forEach(id => {
                 document.getElementById(id).addEventListener('input', generateContent);
             });
-            
-            document.getElementById('fileInput').addEventListener('change', generateContent);
+            setupFileInput();
+        }
+
+        function setupFileInput() {
+            const input = document.getElementById('fileInput');
+            input.addEventListener('change', async (e) => {
+                if (e.target.files.length > 0) {
+                    const newData = await Promise.all(Array.from(e.target.files).map(f => new Promise(res => {
+                        const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(f);
+                    })));
+                    localAssets = [...localAssets, ...newData];
+                    
+                    // Add new file input row after asset processing
+                    const wrapper = document.getElementById('file-input-wrapper');
+                    const nextInput = document.createElement('input');
+                    nextInput.type = 'file';
+                    nextInput.className = 'fileInput';
+                    nextInput.accept = 'image/*';
+                    nextInput.multiple = true;
+                    nextInput.onchange = e.target.onchange; 
+                    wrapper.appendChild(nextInput);
+                    
+                    generateContent();
+                }
+            });
         }
 
         // ASSET MANAGEMENT
         function clearLocalAssets() {
             localAssets = [];
-            document.getElementById('fileInput').value = "";
+            document.getElementById('file-input-wrapper').innerHTML = '<input type="file" id="fileInput" accept="image/*" multiple>';
+            setupFileInput();
             generateContent();
         }
 
@@ -155,19 +181,12 @@
             const files = document.getElementById('fileInput').files;
             const webUrls = document.getElementById('urlInput').value.split('\n').filter(u => u.trim() !== "");
 
-            // Capture new uploads into persistent list
-            if (files.length > 0) {
-                const newData = await Promise.all(Array.from(files).map(f => new Promise(res => {
-                    const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(f);
-                })));
-                localAssets = [...localAssets, ...newData];
-                document.getElementById('fileInput').value = ""; // Ready for next batch
-            }
-
             currentImages = [...localAssets, ...webUrls];
             if (!currentImages.length) {
                 document.getElementById('preview-msg').style.display = 'block';
                 if (animationId) cancelAnimationFrame(animationId);
+                const prev = document.getElementById('preview-img');
+                if(prev) prev.style.display = 'none';
                 return alert("Please add an image.");
             }
 
@@ -196,7 +215,7 @@
 
         // GIF EXPORT
         async function exportToGif() {
-            if (!currentImages.length) return alert("Generate an overlay first.");
+            if (!currentImages.length) return alert("Add images first.");
             const btn = document.getElementById('gifBtn');
             btn.innerText = "Encoding..."; btn.disabled = true;
 
@@ -248,7 +267,7 @@
             const targetImg = isPreview ? document.getElementById('preview-img') : img;
             
             const container = isPreview ? document.getElementById('preview-window') : window;
-            if (!isPreview) targetImg.style.display = 'block';
+            if (targetImg) targetImg.style.display = 'block';
 
             const images = imagesArr || JSON.parse(decodeURIComponent(params.get('imgs')));
             const speedBase = parseInt(settings?.v || params.get('v')) || 180;
