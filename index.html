@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bouncing Image Generator (DVD Logo Style) by GeminiGhostSymphony</title>
+    
+    <!-- EXTERNAL LIBRARIES -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js"></script>
+    
+    <style id="base-styles">
+        /* --- CSS CORE VARIABLES --- */
+        :root { 
+            --accent: #00d4ff; --bg: #121212; --card: #1e1e1e; 
+            --text: #e0e0e0; --muted: #888; --success: #28a745; --err: #ff4444; 
+        }
+
+        /* --- BASE LAYOUT --- */
+        body { 
+            margin: 0; padding: 0; overflow: hidden; background-color: transparent; 
+            font-family: 'Inter', system-ui, sans-serif; color: var(--text); 
+        }
+
+        /* --- MODULAR INTERFACE --- */
+        #setup-ui { background: var(--bg); min-height: 100vh; padding: 40px; display: none; box-sizing: border-box; overflow-y: auto; }
+        .bento-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+        .card { background: var(--card); padding: 24px; border-radius: 16px; border: 1px solid #333; transition: border-color 0.2s ease; }
+        .card:hover { border-color: var(--accent); }
+        h1, h3 { color: var(--accent); margin-top: 0; letter-spacing: -0.5px; }
+        label { display: block; font-weight: 600; margin-bottom: 4px; color: var(--muted); font-size: 0.8em; text-transform: uppercase; }
+        .help-label { font-size: 0.75em; color: var(--muted); margin-bottom: 12px; display: block; line-height: 1.4; }
+
+        /* --- INTERACTIVE INPUTS --- */
+        input, select, textarea, button { padding: 14px; width: 100%; border-radius: 10px; border: 1px solid #444; background: #252525; color: white; margin-bottom: 12px; box-sizing: border-box; font-size: 14px; }
+        button { background: var(--accent); color: #000; font-weight: 800; border: none; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
+        button:hover { background: #fff; transform: scale(1.02); }
+        .download-btn { background: var(--success); color: white; margin-top: 5px; }
+
+        /* --- PREVIEW & OUTPUT --- */
+        #preview-window { border: 2px dashed #444; border-radius: 16px; height: 320px; position: relative; overflow: hidden; background: #000; }
+        .output-box { background: #000; color: #00ff41; padding: 12px; border-radius: 10px; font-family: monospace; word-break: break-all; border: 1px solid #333; max-height: 80px; overflow-y: auto; font-size: 0.75em; margin-bottom: 15px; cursor: copy; }
+        .url-warning { color: var(--err); font-size: 0.8em; margin-top: -10px; margin-bottom: 10px; display: none; }
+
+        /* --- GPU ANIMATIONS --- */
+        #bouncing-image { position: absolute; display: none; pointer-events: none; will-change: transform; transform-origin: top left; }
+        .pixel-art { image-rendering: pixelated; }
+        @keyframes shake { 0%, 100% { transform: translate(0,0); } 25% { transform: translate(4px,4px); } 50% { transform: translate(-4px,-4px); } }
+        .shake-active { animation: shake 0.1s infinite !important; }
+        .invert-active { filter: invert(1); }
+        .zoom-active { transform: scale(1.7) !important; transition: transform 0.1s ease-out; }
+    </style>
+</head>
+<body>
+
+    <!-- UI: SETUP INTERFACE -->
+    <div id="setup-ui">
+        <div class="bento-grid">
+            <div class="card" style="grid-column: span 2;">
+                <h1>Bouncing Image Generator (DVD Logo Style)</h1>
+                <p style="color: var(--muted); font-size: 0.9em; margin: 0;">Free GIF & streaming overlay generator by GeminiGhostSymphony.</p>
+            </div>
+
+            <!-- ASSETS -->
+            <div class="card">
+                <h3>Assets</h3>
+                <label>Image URLs</label>
+                <textarea id="urlInput" rows="2" placeholder="imgur.com"></textarea>
+                <label>Upload Files</label>
+                <input type="file" id="fileInput" accept="image/*" multiple>
+            </div>
+
+            <!-- BEHAVIOR -->
+            <div class="card">
+                <h3>Corner Hit Celebration Effect</h3>
+                <label>Corner Hit Effect</label>
+                <select id="effectType">
+                    <option value="none">No Celebration</option>
+                    <option value="confetti">Confetti Cannon</option>
+                    <option value="flash">Screen Flash</option>
+                    <option value="shake">Screen Shake</option>
+                    <option value="invert">Color Invert</option>
+                    <option value="rainbow">Rainbow Cycle</option>
+                    <option value="zoom">Zoom-in</option>
+                    <option value="random">Random Selection of Above</option>
+                </select>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;"><label>Speed (Px/s)</label><input type="number" id="imgSpeed" value="180"></div>
+                    <div style="flex:1;"><label>Swap (ms)</label><input type="number" id="switchTime" value="0"></div>
+                </div>
+            </div>
+
+            <!-- GIF EXPORT -->
+            <div class="card">
+                <h3>GIF Export</h3>
+                <label>Background Color</label>
+                <input type="color" id="gifBg" value="#000000">
+                <label>Duration (Sec, Max 10)</label>
+                <input type="number" id="gifDuration" value="5" min="1" max="10">
+                <button onclick="exportToGif()" id="gifBtn">Download GIF</button>
+            </div>
+
+            <!-- PREVIEW & EXPORT -->
+            <div class="card" style="grid-column: span 2;">
+                <h3>Preview & Stream Export</h3>
+                <div id="preview-window"><div id="preview-msg" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#444;">Add an image to begin preview.</div></div>
+                <button onclick="generateContent()" style="margin-top:20px;">Generate OBS Package</button>
+                <div id="results-area" style="display:none; margin-top: 25px;">
+                    <div id="lenWarning" class="url-warning">⚠️ URL too long! Use Web URLs instead of file uploads.</div>
+                    <label>Browser Source URL (Length: <span id="urlCount">0</span>)</label>
+                    <div id="generated-url" class="output-box" onclick="copyText(this)"></div>
+                    <label>Clean Custom CSS</label>
+                    <div id="generated-css" class="output-box" onclick="copyText(this)"></div>
+                    <button class="download-btn" onclick="downloadFile()">Download Launcher HTML</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACTIVE OVERLAY ELEMENT -->
+    <img id="bouncing-image" src="" alt="Overlay Logo">
+
+    <script>
+        // INITIALIZATION & ROUTING
+        const params = new URLSearchParams(window.location.search);
+        const img = document.getElementById('bouncing-image');
+        let currentImages = [], lastFrameTime = performance.now();
+
+        if (params.has('imgs')) { startLiveMode(false); } 
+        else { document.getElementById('setup-ui').style.display = 'block'; }
+
+        // GENERATOR LOGIC
+        async function generateContent() {
+            const files = document.getElementById('fileInput').files;
+            const webUrls = document.getElementById('urlInput').value.split('\n').filter(u => u.trim() !== "");
+            const localData = await Promise.all(Array.from(files).map(f => new Promise(res => {
+                const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(f);
+            })));
+
+            currentImages = [...localData, ...webUrls];
+            if (!currentImages.length) return alert("Please add an image.");
+
+            const settings = {
+                imgs: encodeURIComponent(JSON.stringify(currentImages)),
+                v: document.getElementById('imgSpeed').value,
+                e: document.getElementById('effectType').value,
+                t: document.getElementById('switchTime').value
+            };
+
+            const finalUrl = `${window.location.origin}${window.location.pathname}?imgs=${settings.imgs}&v=${settings.v}&e=${settings.e}&t=${settings.t}`;
+            document.getElementById('generated-url').innerText = finalUrl;
+            document.getElementById('urlCount').innerText = finalUrl.length;
+            document.getElementById('lenWarning').style.display = finalUrl.length > 2000 ? 'block' : 'none';
+            document.getElementById('generated-css').innerText = `body { background: transparent; overflow: hidden; margin: 0; }\n#bouncing-image { will-change: transform; transform-origin: top left; }`;
+            document.getElementById('results-area').style.display = 'block';
+            document.getElementById('preview-msg').style.display = 'none';
+
+            const previewBox = document.getElementById('preview-window');
+            previewBox.innerHTML = '<img id="preview-img" style="position:absolute; width:60px; will-change:transform; transform-origin: top left;">';
+            startLiveMode(true, settings, currentImages);
+        }
+
+        // GIF EXPORT
+        async function exportToGif() {
+            if (!currentImages.length) return alert("Generate an overlay first.");
+            const btn = document.getElementById('gifBtn');
+            btn.innerText = "Encoding..."; btn.disabled = true;
+
+            const duration = Math.min(document.getElementById('gifDuration').value, 10);
+            const bgColor = document.getElementById('gifBg').value;
+
+            // Fetch worker code and create a local Blob
+            const response = await fetch('https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js');
+            const workerCode = await response.text();
+            const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
+            const workerUrl = URL.createObjectURL(workerBlob);
+
+            const gif = new GIF({ 
+                workers: 2, quality: 10, width: 400, height: 300, 
+                workerScript: workerUrl 
+            });
+
+            const tempCanvas = document.createElement('canvas');
+            const ctx = tempCanvas.getContext('2d');
+            tempCanvas.width = 400; tempCanvas.height = 300;
+
+            const logo = new Image(); logo.crossOrigin = "Anonymous"; logo.src = currentImages[0];
+
+            logo.onload = () => {
+                let x = 10, y = 10, dx = 150, dy = 150;
+                for (let i = 0; i < duration * 10; i++) {
+                    ctx.fillStyle = bgColor; ctx.fillRect(0, 0, 400, 300);
+                    x += dx * 0.1; y += dy * 0.1;
+                    if (x + 50 >= 400 || x <= 0) dx = -dx;
+                    if (y + 50 >= 300 || y <= 0) dy = -dy;
+                    ctx.drawImage(logo, x, y, 50, 50);
+                    gif.addFrame(ctx, { copy: true, delay: 100 });
+                }
+                gif.on('finished', (blob) => {
+                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); 
+                    a.download = 'bouncing-logo.gif'; a.click();
+                    btn.innerText = "Download GIF"; btn.disabled = false;
+                    URL.revokeObjectURL(workerUrl);
+                });
+                gif.render();
+            };
+        }
+
+        // ANIMATION 
+        function startLiveMode(isPreview, settings = null, imagesArr = null) {
+            const targetImg = isPreview ? document.getElementById('preview-img') : img;
+            const container = isPreview ? document.getElementById('preview-window') : window;
+            if (!isPreview) targetImg.style.display = 'block';
+
+            const images = imagesArr || JSON.parse(decodeURIComponent(params.get('imgs')));
+            const speedBase = parseInt(settings?.v || params.get('v')) || 180;
+            const effect = settings?.e || params.get('e');
+            const switchMs = parseInt(settings?.t || params.get('t')) || 0;
+
+            let x = 20, y = 20, dx = speedBase, dy = speedBase, currentIdx = 0, isSlowing = false, lastSwitch = Date.now();
+            targetImg.crossOrigin = "anonymous";
+            targetImg.src = images[currentIdx];
+
+            function animate(currentTime) {
+                const deltaTime = (currentTime - lastFrameTime) / 1000;
+                lastFrameTime = currentTime;
+                const w = isPreview ? container.clientWidth : container.innerWidth;
+                const h = isPreview ? container.clientHeight : container.innerHeight;
+                const iw = targetImg.clientWidth, ih = targetImg.clientHeight;
+                const mult = isSlowing ? 0.2 : 1;
+
+                x += dx * deltaTime * mult; y += dy * deltaTime * mult;
+
+                let hitX = (x + iw >= w || x <= 0);
+                let hitY = (y + ih >= h || y <= 0);
+
+                if (hitX && hitY) triggerCelebration(effect, isPreview ? container : document.body, targetImg);
+
+                // COLLISION BUFFER
+                if (hitX) { dx = -dx; x = Math.max(0, Math.min(x, w - iw)); }
+                if (hitY) { dy = -dy; y = Math.max(0, Math.min(y, h - ih)); }
+
+                if ((hitX || hitY) && images.length > 1) {
+                    const now = Date.now();
+                    if (switchMs === 0 || (now - lastSwitch >= switchMs)) {
+                        currentIdx = (currentIdx + 1) % images.length;
+                        targetImg.src = images[currentIdx];
+                        lastSwitch = now;
+                    }
+                }
+                targetImg.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+                requestAnimationFrame(animate);
+            }
+            targetImg.onload = () => { lastFrameTime = performance.now(); requestAnimationFrame(animate); };
+            
+            // RE-CENTER FOR RESIZING
+            if (!isPreview) window.addEventListener('resize', () => { x = 20; y = 20; });
+        }
+
+        // CELEBRATION TRIGGER
+        function triggerCelebration(type, body, targetImg) {
+            const effects = ['confetti', 'flash', 'shake', 'invert', 'rainbow', 'zoom'];
+            const sel = type === 'random' ? effects[Math.floor(Math.random() * effects.length)] : type;
+            
+            if (sel === 'confetti') confetti({ particleCount: 200, spread: 90, origin: { y: 0.7 } });
+            else if (sel === 'flash') { body.style.backgroundColor = 'white'; setTimeout(() => body.style.backgroundColor = 'transparent', 150); }
+            else if (sel === 'shake') { body.classList.add('shake-active'); setTimeout(() => body.classList.remove('shake-active'), 500); }
+            else if (sel === 'invert') { targetImg.classList.add('invert-active'); setTimeout(() => targetImg.classList.remove('invert-active'), 400); }
+            else if (sel === 'zoom') { isSlowing = true; targetImg.classList.add('zoom-active'); setTimeout(() => { isSlowing = false; targetImg.classList.remove('zoom-active'); }, 1000); }
+            else if (sel === 'rainbow') {
+                let c = 0, colors = ['#ff0000', '#ffa500', '#ffff00', '#008000', '#0000ff', '#4b0082'];
+                let iv = setInterval(() => { body.style.backgroundColor = colors[c++]; if (c >= colors.length) { clearInterval(iv); body.style.backgroundColor = 'transparent'; } }, 120);
+            }
+        }
+
+        // UTILITIES
+        function copyText(el) {
+            navigator.clipboard.writeText(el.innerText);
+            el.style.borderColor = "#00ff41"; // Active link verification
+            setTimeout(() => el.style.borderColor = '#333', 600);
+        }
+
+        function downloadFile() {
+            const url = document.getElementById('generated-url').innerText;
+            const html = `<!DOCTYPE html><html><body style="margin:0;overflow:hidden;"><script>window.location.replace("${url}");<\/script></body></html>`;
+            const blob = new Blob([html], { type: 'text/html' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+            a.download = 'obs-launcher.html'; a.click();
+        }
+        
+    </script>
+</body>
+</html>
