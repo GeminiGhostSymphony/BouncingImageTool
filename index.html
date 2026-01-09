@@ -328,7 +328,7 @@
 
                         ctx.save();
                         ctx.translate(x, y);
-                        ctx.drawImage(logo, x, y, 100, 100);
+                        ctx.drawImage(logo, 0, 0, 100, 100);
                         ctx.restore();
                         
                         gif.addFrame(ctx, { copy: true, delay: delay });
