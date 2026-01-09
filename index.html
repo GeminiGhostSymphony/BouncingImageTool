@@ -169,7 +169,6 @@
                 if (files.length > 0) {
                     // Create a unique group for these specific blobs
                     const blobGroup = files.map(f => URL.createObjectURL(f));
-                    localAssets = [...localAssets, ...blobGroup];
                     
                     // Create a UI wrapper for the delete button
                     const wrapper = document.createElement('div');
@@ -203,11 +202,14 @@
                         //    const targetImg = document.getElementById('preview-img');
                         //    if (targetImg) targetImg.style.display = 'none';
                         //}
-                        generateContent();
+                        syncAndRefresh();
                     };
                     
                     wrapper.appendChild(delBtn);
-                    el.parentElement.insertBefore(wrapper, el);
+                    const container = document.getElementById('file-input-container');
+                    container.insertBefore(wrapper, container.firstChild);
+
+                    el.value = null;
                     
                     // Hide the used input so you can't re-upload in the same slot
                     el.style.display = 'none';
@@ -220,44 +222,56 @@
                     document.getElementById('file-input-container').appendChild(next);
 
                     currentImages = [...localAssets];
-                    generateContent();
+
+                    syncAndRefresh();
                 }
             });
         }
 
+        // REFRESH AND SYNC IMAGES
+        function syncAndRefresh() {
+            const container = document.getElementById('file-input-container');
+            const rows = [...container.querySelectorAll('.upload-row')];
+            localAssets = rows.flatMap(row => JSON.parse(row.dataset.blobs));
+            
+            // Refresh the preview
+            generateContent();
+        }
+
         // ASSET MANAGEMENT
         function clearLocalAssets() {
-            localAssets.forEach(url => URL.revokeObjectURL(url));
-            localAssets = []; 
-
-            if (animationId) cancelAnimationFrame(animationId);
-            const targetImg = document.getElementById('preview-img');
-            if (targetImg) {
-                targetImg.style.display = 'none';
-                targetImg.src = ""; // Clear out the last image
-            }
-            
             const container = document.getElementById('file-input-container');
-            container.innerHTML = '<input type="file" class="file-input-row" accept="image/*" multiple>';
-            initFileInput(container.querySelector('input'));
-            generateContent(); // Restart preview
+            const rows = container.querySelectorAll('.upload-row');
+            rows.forEach(row => {
+                const blobs = JSON.parse(row.dataset.blobs);
+                blobs.forEach(url => URL.revokeObjectURL(url));
+                row.remove();
+            });
+            
+            localAssets = [];
+            syncAndRefresh();
         }
 
         // GENERATOR LOGIC
         async function generateContent() {
-            const webUrls = document.getElementById('urlInput').value.split('\n')
-                .map(u => u.trim())
-                .filter(u => u !== "");
+            const urlInput = document.getElementById('urlInput');
+            const webUrls = urlInput ? urlInput.value.split('\n').map(u => u.trim()).filter(u => u !== "") : [];
 
             currentImages = [...localAssets, ...webUrls];
             
             if (!currentImages.length) {
-                document.getElementById('preview-msg').style.display = 'block';
-                document.getElementById('results-area').style.display = 'none';
+                if (pMsg) pMsg.style.display = 'block';
                 if (animationId) cancelAnimationFrame(animationId);
-                const pImg = document.getElementById('preview-img');
-                if (pImg) pImg.style.display = 'none';
+                if (pImg) {
+                    pImg.style.display = 'none';
+                    pImg.src = ""; // Clear source to stop "ghosting"
+                }
                 return;
+            }
+
+            if (pImg) {
+                pImg.style.display = 'block';
+                pImg.src = currentImages[0]; 
             }
 
             const settings = {
@@ -281,6 +295,8 @@
             document.getElementById('generated-css').innerText = css;
             
             document.getElementById('results-area').style.display = 'block';
+            if (pMsg) pMsg.style.display = 'none';
+            
             document.getElementById('preview-msg').style.display = 'none';
 
             let pImg = document.getElementById('preview-img');
