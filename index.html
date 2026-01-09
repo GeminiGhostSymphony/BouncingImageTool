@@ -381,35 +381,42 @@
                     const baseSpeed = isNaN(rawSpeed) ? 15 : rawSpeed;
                     const velocity = baseSpeed * (800 / 1000);
 
-                    const shouldSwapTimed = swapSecs > 0 && (simulatedTime - lastSwapTime) >= swapSecs; // Image swapping
-
-                    let hitX = (x + 100 >= 800 || x <= 0);
-                    let hitY = (y + 100 >= 600 || y <= 0);
-
-                    // Swap on bounce if swapSecs is 0, or swap on timer
-                    if ((swapSecs === 0 && (hitX || hitY)) || shouldSwapTimed) {
-                        if (loadedImgs.length > 1) {
-                            imgIdx = (imgIdx + 1) % loadedImgs.length;
-                            currentLogo = loadedImgs[imgIdx];
-                            lastSwapTime = simulatedTime;
-                        }
-                    }
-
                     const targetSize = 120; 
                     const ratio = currentLogo.naturalWidth / currentLogo.naturalHeight;
                     let iw = ratio > 1 ? targetSize : targetSize * ratio;
                     let ih = ratio > 1 ? targetSize / ratio : targetSize;
-                    
-                    ctx.fillStyle = document.getElementById('gifBg').value; 
-                    ctx.fillRect(0,0,800,600);
-                    
+
                     if (baseSpeed > 0) {
                         x += dx * velocity * dt * 10;
                         y += dy * velocity * dt * 10;
                     }
+
+                    let hitX = false, hitY = false;
+                    if (x + iw >= 800) { dx = -1; x = 800 - iw; hitX = true; } 
+                    else if (x <= 0) { dx = 1; x = 0; hitX = true; }
                     
-                    if (x + iw >= 800) { dx = -1; x = 800 - iw; } else if (x <= 0) { dx = 1; x = 0; }
-                    if (y + ih >= 600) { dy = -1; y = 600 - ih; } else if (y <= 0) { dy = 1; y = 0; }
+                    if (y + ih >= 600) { dy = -1; y = 600 - ih; hitY = true; } 
+                    else if (y <= 0) { dy = 1; y = 0; hitY = true; }
+
+                    const shouldSwapTimed = swapSecs > 0 && (simulatedTime - lastSwapTime) >= swapSecs; 
+                    const shouldSwapOnBounce = swapSecs === 0 && (hitX || hitY);
+
+                    // Swap on bounce if swapSecs is 0, or swap on timer
+                    if (shouldSwapTimed || shouldSwapOnBounce) {
+                        if (loadedImgs.length > 1) {
+                            imgIdx = (imgIdx + 1) % loadedImgs.length;
+                            currentLogo = loadedImgs[imgIdx];
+                            lastSwapTime = simulatedTime;
+                            
+                            // Recalculate dimensions for the new image immediately so it draws correctly this frame
+                            const newRatio = currentLogo.naturalWidth / currentLogo.naturalHeight;
+                            iw = newRatio > 1 ? targetSize : targetSize * newRatio;
+                            ih = newRatio > 1 ? targetSize / newRatio : targetSize;
+                        }
+                    }
+                    
+                    ctx.fillStyle = document.getElementById('gifBg').value; 
+                    ctx.fillRect(0,0,800,600);
 
                     ctx.save();
                     ctx.translate(x, y);
