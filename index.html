@@ -170,8 +170,6 @@
                     // Create a unique group for these specific blobs
                     const blobGroup = files.map(f => URL.createObjectURL(f));
                     localAssets = [...localAssets, ...blobGroup];
-
-                    currentImages = [...localAssets];
                     
                     // Create a UI wrapper for the delete button
                     const wrapper = document.createElement('div');
@@ -199,12 +197,12 @@
                         localAssets = localAssets.filter(asset => !blobGroup.includes(asset));
                         blobGroup.forEach(url => URL.revokeObjectURL(url));
                         wrapper.remove();
-                        currentImages = [...localAssets];
-                        if (currentImages.length === 0) {
-                            if (animationId) cancelAnimationFrame(animationId);
-                            const targetImg = document.getElementById('preview-img');
-                            if (targetImg) targetImg.style.display = 'none';
-                        }
+                        //currentImages = [...localAssets];
+                        //if (currentImages.length === 0) {
+                        //    if (animationId) cancelAnimationFrame(animationId);
+                        //    const targetImg = document.getElementById('preview-img');
+                        //    if (targetImg) targetImg.style.display = 'none';
+                        //}
                         generateContent();
                     };
                     
@@ -231,7 +229,6 @@
         function clearLocalAssets() {
             localAssets.forEach(url => URL.revokeObjectURL(url));
             localAssets = []; 
-            currentImages = [];
 
             if (animationId) cancelAnimationFrame(animationId);
             const targetImg = document.getElementById('preview-img');
@@ -248,15 +245,19 @@
 
         // GENERATOR LOGIC
         async function generateContent() {
-            const webUrls = document.getElementById('urlInput').value.split('\n').filter(u => u.trim() !== "");
+            const webUrls = document.getElementById('urlInput').value.split('\n')
+                .map(u => u.trim())
+                .filter(u => u !== "");
 
             currentImages = [...localAssets, ...webUrls];
+            
             if (!currentImages.length) {
                 document.getElementById('preview-msg').style.display = 'block';
+                document.getElementById('results-area').style.display = 'none';
                 if (animationId) cancelAnimationFrame(animationId);
                 const pImg = document.getElementById('preview-img');
                 if (pImg) pImg.style.display = 'none';
-                return alert("Please add an image.");
+                return;
             }
 
             const settings = {
@@ -270,6 +271,7 @@
             document.getElementById('generated-url').innerText = finalUrl;
             document.getElementById('urlCount').innerText = finalUrl.length;
             document.getElementById('lenWarning').style.display = finalUrl.length > 4000 ? 'block' : 'none';
+            
             // Dynamic CSS logic
             let css = `#bouncing-image { position: absolute; will-change: transform; transform-origin: top left; }`;
             if (settings.e === 'shake') css += `\n.shake-active { animation: shake 0.1s infinite !important; }\n@keyframes shake { 0%, 100% { transform: translate(0,0); } 25% { transform: translate(4px,4px); } 50% { transform: translate(-4px,-4px); } }`;
@@ -281,9 +283,12 @@
             document.getElementById('results-area').style.display = 'block';
             document.getElementById('preview-msg').style.display = 'none';
 
-            if (!document.getElementById('preview-img')) {
+            let pImg = document.getElementById('preview-img');
+            if (!pImg) {
                 document.getElementById('preview-window').innerHTML = '<img id="preview-img" style="position:absolute; width:60px; will-change:transform; transform-origin: top left;">';
+                pImg = document.getElementById('preview-img');
             }
+            pImg.style.display = 'block';
 
             startLiveMode(true, settings, currentImages);
         }
