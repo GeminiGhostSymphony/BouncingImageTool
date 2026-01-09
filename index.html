@@ -136,7 +136,7 @@
     </div>
 
     <!-- ACTIVE OVERLAY ELEMENT -->
-    <img id="bouncing-image" src="" alt="Overlay Logo">
+    <img id="bouncing-image" src="" alt="Bouncing Image">
 
     <script>
         // INITIALIZATION & ROUTING
@@ -299,20 +299,26 @@
                 tempCanvas.width = 800; tempCanvas.height = 600;
     
                 const logo = new Image(); logo.crossOrigin = "Anonymous"; logo.src = currentImages[0];
+
+                const rawSpeed = parseFloat(document.getElementById('imgSpeed').value);
+                const baseSpeed = isNaN(rawSpeed) ? 180 : rawSpeed;
+
+                const velocity = baseSpeed * (800 / 1000);
     
                 logo.onload = () => {
                     let x = 40, y = 40, dx = 1, dy = 1;
-                    const frameDelay = 60;
-                    const dt = frameDelay/1000; // 0.06 seconds per frame
+                    const dt = 0.06; // 0.06 seconds per frame
                     const velocity = (baseSpeed / 10) * (800 / 100);
                     for (let i = 0; i < 60; i++) {
                         ctx.fillStyle = document.getElementById('gifBg').value; ctx.fillRect(0,0,800,600);
-                        if (baseSpeed > 0) {
+                        if (velocity > 0) {
                             x += dx * velocity * dt * 10;
                             y += dy * velocity * dt * 10;
                         }
                         
-                        if (x + 100 >= 800 || x <= 0) dx = -dx; if (y + 100 >= 600 || y <= 0) dy = -dy;
+                        if (x + 100 >= 800) { dx = -1; x = 700; } else if (x <= 0) { dx = 1; x = 0; }
+                        if (y + 100 >= 600) { dy = -1; y = 500; } else if (y <= 0) { dy = 1; y = 0; }
+                        
                         ctx.drawImage(logo, x, y, 100, 100); gif.addFrame(ctx, { copy: true, delay: 60 });
                     }
                     gif.on('finished', (blob) => {
@@ -339,15 +345,15 @@
             const container = isPreview ? document.getElementById('preview-window') : window;
             if (targetImg) targetImg.style.display = 'block';
 
-            const userSpeed = isPreview 
-                ? (parseFloat(document.getElementById('imgSpeed').value)) 
-                : (parseFloat(params.get('v')));
-            
-            const baseSpeed = isNaN(userSpeed) ? 180 : userSpeed;
-
             const imgs = imagesArr || JSON.parse(decodeURIComponent(params.get('imgs')));
             const effect = settings?.e || params.get('e');
             const swap = parseInt(settings?.t || params.get('t')) || 0;
+
+            const rawSpeed = isPreview 
+                ? (parseFloat(document.getElementById('imgSpeed').value)) 
+                : (parseFloat(params.get('v')));
+            
+            const baseSpeed = isNaN(rawSpeed) ? 180 : rawSpeed;
 
             let x = 20, y = 20, dx = 1, dy = 1, idx = 0, slow = false, lastSw = Date.now();
             targetImg.crossOrigin = "anonymous";
@@ -368,11 +374,11 @@
                 const iw = targetImg.clientWidth || 80;
                 const ih = targetImg.clientHeight || 80;
 
-                const velocity = (baseSpeed / 10) * (w / 100); 
+                const velocity = baseSpeed * (w / 1000); 
 
                 if (baseSpeed > 0) {
-                    x += dirX * velocity * dt * 10;
-                    y += dirY * velocity * dt * 10;
+                    x += dx * velocity * dt * 10;
+                    y += dy * velocity * dt * 10;
                 }
                 
                 let hX = (x + iw >= w || x <= 0);
