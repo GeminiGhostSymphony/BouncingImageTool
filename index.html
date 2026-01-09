@@ -279,9 +279,6 @@
             const duration = Math.min(document.getElementById('gifDuration').value, 10);
             const bgColor = document.getElementById('gifBg').value;
 
-            const userSpeed = parseFloat(document.getElementById('imgSpeed').value);
-            const baseSpeed = isNaN(userSpeed) ? 180 : userSpeed;
-
             try {
                 // Fetch worker code and create a local Blob
                 const response = await fetch('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js');
@@ -297,11 +294,14 @@
                 const tempCanvas = document.createElement('canvas');
                 const ctx = tempCanvas.getContext('2d');
                 tempCanvas.width = 800; tempCanvas.height = 600;
+
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
     
                 const logo = new Image(); logo.crossOrigin = "Anonymous"; logo.src = currentImages[0];
 
                 const rawSpeed = parseFloat(document.getElementById('imgSpeed').value);
-                const baseSpeed = isNaN(rawSpeed) ? 180 : rawSpeed;
+                const baseSpeed = isNaN(rawSpeed) ? 15 : rawSpeed;
 
                 const velocity = baseSpeed * (800 / 1000);
     
@@ -313,7 +313,9 @@
                     
                     const velocity = (baseSpeed / 10) * (800 / 100);
                     for (let i = 0; i < totalFrames; i++) {
-                        ctx.fillStyle = document.getElementById('gifBg').value; ctx.fillRect(0,0,800,600);
+                        ctx.fillStyle = document.getElementById('gifBg').value; 
+                        ctx.fillRect(0,0,800,600);
+                        
                         if (baseSpeed > 0) {
                             x += dx * velocity * dt * 10;
                             y += dy * velocity * dt * 10;
@@ -322,7 +324,7 @@
                         if (x + 100 >= 800) { dx = -1; x = 700; } else if (x <= 0) { dx = 1; x = 0; }
                         if (y + 100 >= 600) { dy = -1; y = 500; } else if (y <= 0) { dy = 1; y = 0; }
                         
-                        ctx.drawImage(logo, Math.round(x), Math.round(y), 100, 100);
+                        ctx.drawImage(logo, x, y, 100, 100);
                         gif.addFrame(ctx, { copy: true, delay: delay });
                     }
                     gif.on('finished', (blob) => {
@@ -376,7 +378,7 @@
                     ? (parseFloat(document.getElementById('imgSpeed').value)) 
                     : (parseFloat(params.get('v')));
                 
-                const baseSpeed = isNaN(rawSpeed) ? 180 : rawSpeed;
+                const baseSpeed = isNaN(rawSpeed) ? 15 : rawSpeed;
 
                 const velocity = baseSpeed * (w / 1000); 
 
@@ -405,7 +407,7 @@
                     }
                 }
                 
-                targetImg.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+                targetImg.style.transform = `translate3d(${x}px, ${y}px, 0.01px)`;
                 animationId = requestAnimationFrame(animate);
             }
         
@@ -424,8 +426,6 @@
             }
             
             targetImg.src = imgs[idx];
-            
-            // if (!isPreview) window.addEventListener('resize', () => { x = 20; y = 20; });
         }
 
         // CELEBRATION TRIGGER
