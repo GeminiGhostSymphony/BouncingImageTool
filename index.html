@@ -288,7 +288,7 @@
                 const workerUrl = URL.createObjectURL(workerCode);
     
                 const gif = new GIF({ 
-                    workers: 4, quality: 10, width: 800, height: 600, 
+                    workers: 4, quality: 20, width: 800, height: 600, 
                     workerScript: workerUrl, dither: false
                 });
     
@@ -308,9 +308,9 @@
     
                 logo.onload = () => {
                     let x = 40, y = 40, dx = 1, dy = 1;
-                    const delay = 20; 
+                    const delay = 25; 
                     const dt = delay / 1000; // 0.03 seconds per frame
-                    const totalFrames = 120;
+                    const totalFrames = 100;
                     
                     for (let i = 0; i < totalFrames; i++) {
                         ctx.save();
@@ -331,6 +331,15 @@
                         ctx.restore();
                         gif.addFrame(ctx, { copy: true, delay: delay });
                     }
+                    // Failsafe: Reset button if worker hasn't finished in 30 seconds
+                    const failsafe = setTimeout(() => {
+                        if (btn.disabled) {
+                            btn.innerText = "Error: Timeout";
+                            btn.disabled = false;
+                        }
+                    }, 30000);
+
+                    
                     gif.on('finished', (blob) => {
                         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'bouncing-image.gif'; a.click();
                         btn.innerText = "Download GIF"; btn.disabled = false;
