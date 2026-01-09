@@ -66,10 +66,10 @@
             <div class="card">
                 <h3>Image Assets</h3>
                 <label>Image URLs (one per line)</label>
-                <textarea id="urlInput" rows="2" placeholder="https://example.com/logo.png"></textarea>
+                <textarea id="urlInput" rows="2" placeholder="Paste URLs here..."></textarea>
                 <label>Upload Images</label>
-                <div id="file-input-wrapper">
-                    <input type="file" class="local-file-input" accept="image/*" multiple>
+                <div id="file-inputs">
+                    <input type="file" id="fileInput" accept="image/*" multiple>
                 </div>
                 <button class="clear-btn" onclick="clearLocalAssets()">Clear All Local Uploads</button>
             </div>
@@ -141,38 +141,13 @@
             ['urlInput', 'imgSpeed', 'switchTime', 'effectType'].forEach(id => {
                 document.getElementById(id).addEventListener('input', generateContent);
             });
-            setupFileInput();
-        }
-
-        function setupFileInput() {
-            const input = document.getElementById('fileInput');
-            input.addEventListener('change', async (e) => {
-                if (e.target.files.length > 0) {
-                    const newData = await Promise.all(Array.from(e.target.files).map(f => new Promise(res => {
-                        const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(f);
-                    })));
-                    localAssets = [...localAssets, ...newData];
-                    
-                    // Add new file input row after asset processing
-                    const wrapper = document.getElementById('file-input-wrapper');
-                    const nextInput = document.createElement('input');
-                    nextInput.type = 'file';
-                    nextInput.className = 'fileInput';
-                    nextInput.accept = 'image/*';
-                    nextInput.multiple = true;
-                    nextInput.onchange = e.target.onchange; 
-                    wrapper.appendChild(nextInput);
-                    
-                    generateContent();
-                }
-            });
+            document.getElementById('fileInput').addEventListener('change', generateContent);
         }
 
         // ASSET MANAGEMENT
         function clearLocalAssets() {
             localAssets = [];
-            document.getElementById('file-input-wrapper').innerHTML = '<input type="file" id="fileInput" accept="image/*" multiple>';
-            setupFileInput();
+            document.getElementById('fileInput').value = "";
             generateContent();
         }
 
@@ -181,12 +156,18 @@
             const files = document.getElementById('fileInput').files;
             const webUrls = document.getElementById('urlInput').value.split('\n').filter(u => u.trim() !== "");
 
+            if (files.length > 0) {
+                const newData = await Promise.all(Array.from(files).map(f => new Promise(res => {
+                    const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(f);
+                })));
+                localAssets = [...localAssets, ...newData];
+                document.getElementById('fileInput').value = "";
+            }
+
             currentImages = [...localAssets, ...webUrls];
             if (!currentImages.length) {
                 document.getElementById('preview-msg').style.display = 'block';
                 if (animationId) cancelAnimationFrame(animationId);
-                const prev = document.getElementById('preview-img');
-                if(prev) prev.style.display = 'none';
                 return alert("Please add an image.");
             }
 
