@@ -170,6 +170,8 @@
                     // Create a unique group for these specific blobs
                     const blobGroup = files.map(f => URL.createObjectURL(f));
                     localAssets = [...localAssets, ...blobGroup];
+
+                    currentImages = [...localAssets];
                     
                     // Create a UI wrapper for the delete button
                     const wrapper = document.createElement('div');
@@ -233,7 +235,10 @@
 
             if (animationId) cancelAnimationFrame(animationId);
             const targetImg = document.getElementById('preview-img');
-            if (targetImg) targetImg.style.display = 'none';
+            if (targetImg) {
+                targetImg.style.display = 'none';
+                targetImg.src = ""; // Clear out the last image
+            }
             
             const container = document.getElementById('file-input-container');
             container.innerHTML = '<input type="file" class="file-input-row" accept="image/*" multiple>';
