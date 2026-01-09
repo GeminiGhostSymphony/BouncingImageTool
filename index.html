@@ -352,63 +352,81 @@
 
                 ctx.imageSmoothingEnabled = true;
                 ctx.imageSmoothingQuality = 'high';
-    
-                const logo = new Image(); logo.crossOrigin = "Anonymous"; logo.src = currentImages[0];
-    
-                logo.onload = () => {
+
+                const loadImages = currentImages.map(url => {
+                    return new Promise((resolve) => {
+                        const img = new Image();
+                        img.crossOrigin = "Anonymous";
+                        img.onload = () => resolve(img);
+                        img.src = url;
+                    });
+                });
+
+                const loadedImgs = await Promise.all(loadImages);
+
+                let imgIdx = 0;
+                let currentLogo = loadedImgs[imgIdx];
+                let lastSwapTime = 0; // Simulated seconds
+                let x = 40, y = 40, dx = 1, dy = 1;
+  
+                const delay = 30; 
+                const dt = delay / 1000; 
+                const durationSetting = Math.min(document.getElementById('gifDuration').value, 10) || 3;
+                const totalFrames = Math.round((durationSetting * 1000) / delay);
+                const swapSecs = parseFloat(document.getElementById('switchTime').value) || 0;
+                
+                for (let i = 0; i < totalFrames; i++) {
+                    const simulatedTime = i * dt; // Current timestamp
+                    const rawSpeed = parseFloat(document.getElementById('imgSpeed').value);
+                    const baseSpeed = isNaN(rawSpeed) ? 15 : rawSpeed;
+                    const velocity = baseSpeed * (800 / 1000);
+
+                    const shouldSwapTimed = swapSecs > 0 && (simulatedTime - lastSwapTime) >= swapSecs; // Image swapping
+
+                    let hitX = (x + 100 >= 800 || x <= 0);
+                    let hitY = (y + 100 >= 600 || y <= 0);
+
+                    // Swap on bounce if swapSecs is 0, or swap on timer
+                    if ((swapSecs === 0 && (hitX || hitY)) || shouldSwapTimed) {
+                        if (loadedImgs.length > 1) {
+                            imgIdx = (imgIdx + 1) % loadedImgs.length;
+                            currentLogo = loadedImgs[imgIdx];
+                            lastSwapTime = simulatedTime;
+                        }
+                    }
 
                     const targetSize = 120; 
                     const ratio = logo.naturalWidth / logo.naturalHeight;
-                    let iw, ih;
-        
-                    if (ratio > 1) {
-                        iw = targetSize;
-                        ih = targetSize / ratio;
-                    } else {
-                        ih = targetSize;
-                        iw = targetSize * ratio;
+                    let iw = ratio > 1 ? targetSize : targetSize * ratio;
+                    let ih = ratio > 1 ? targetSize / ratio : targetSize;
+                    
+                    ctx.fillStyle = document.getElementById('gifBg').value; 
+                    ctx.fillRect(0,0,800,600);
+                    
+                    if (baseSpeed > 0) {
+                        x += dx * velocity * dt * 10;
+                        y += dy * velocity * dt * 10;
                     }
                     
-                    let x = 40, y = 40, dx = 1, dy = 1;
-                    const delay = 30; 
-                    const dt = delay / 1000; 
-                    const duration = Math.min(document.getElementById('gifDuration').value, 10) || 3;
-                    const totalFrames = Math.round((duration * 1000) / delay);
-                    
-                    for (let i = 0; i < totalFrames; i++) {
-                        const rawSpeed = parseFloat(document.getElementById('imgSpeed').value);
-                        const baseSpeed = isNaN(rawSpeed) ? 15 : rawSpeed;
-        
-                        const velocity = baseSpeed * (800 / 1000);
-                        
-                        ctx.fillStyle = document.getElementById('gifBg').value; 
-                        ctx.fillRect(0,0,800,600);
-                        
-                        if (baseSpeed > 0) {
-                            x += dx * velocity * dt * 10;
-                            y += dy * velocity * dt * 10;
-                        }
-                        
-                        if (x + iw >= 800) { dx = -1; x = 800 - iw; } else if (x <= 0) { dx = 1; x = 0; }
-                        if (y + ih >= 600) { dy = -1; y = 600 - ih; } else if (y <= 0) { dy = 1; y = 0; }
+                    if (x + iw >= 800) { dx = -1; x = 800 - iw; } else if (x <= 0) { dx = 1; x = 0; }
+                    if (y + ih >= 600) { dy = -1; y = 600 - ih; } else if (y <= 0) { dy = 1; y = 0; }
 
-                        ctx.save();
-                        ctx.translate(x, y);
-                        ctx.drawImage(logo, 0, 0, iw, ih);
-                        ctx.restore();
-                        
-                        gif.addFrame(ctx, { copy: true, delay: delay });
-                    }
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.drawImage(logo, 0, 0, iw, ih);
+                    ctx.restore();
                     
-                    gif.on('finished', (blob) => {
-                        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); 
-                        a.download = 'image-bounce.gif'; a.click();
-                        URL.revokeObjectURL(workerUrl); 
-                        btn.innerText = originalText; btn.disabled = false;
-                    });
+                    gif.addFrame(ctx, { copy: true, delay: delay });
+                }
                     
-                    gif.render();
-                };
+                gif.on('finished', (blob) => {
+                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); 
+                    a.download = 'image-bounce.gif'; a.click();
+                    URL.revokeObjectURL(workerUrl); 
+                    btn.innerText = originalText; btn.disabled = false;
+                });
+                    
+                gif.render();
             } catch (err) { alert("GIF Error: " + err); btn.innerText = "Download GIF"; btn.disabled = false; }
         }
 
