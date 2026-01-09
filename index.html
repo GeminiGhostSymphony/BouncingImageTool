@@ -35,7 +35,7 @@
         input, select, textarea, button { padding: 14px; width: 100%; border-radius: 10px; border: 1px solid #444; background: #252525; color: white; margin-bottom: 12px; box-sizing: border-box; font-size: 14px; }
         button { background: var(--accent); color: #000; font-weight: 800; border: none; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
         button:hover { background: #fff; transform: scale(1.02); }
-        .clear-btn { background: #444; color: #fff; margin-top: 5px; font-size: 11px; padding: 8px;}
+        .clear-btn { background:  var(--success); color: white; margin-top: 5px; font-size: 11px; padding: 8px;}
         .download-btn { background: var(--success); color: white; margin-top: 5px; }
 
         /* --- PREVIEW & OUTPUT --- */
@@ -170,8 +170,10 @@
 
         // ASSET MANAGEMENT
         function clearLocalAssets() {
-            localAssets = [];
+            currentImages = [];
+            document.getElementById('file-input-container').innerHTML = '<input type="file" class="file-input-row" accept="image/*" multiple>';
             document.getElementById('fileInput').value = "";
+            initFileInput(document.querySelector('.file-input-row'));
             generateContent();
         }
 
@@ -183,6 +185,8 @@
             if (!currentImages.length) {
                 document.getElementById('preview-msg').style.display = 'block';
                 if (animationId) cancelAnimationFrame(animationId);
+                const pImg = document.getElementById('preview-img');
+                if (pImg) pImg.style.display = 'none';
                 return alert("Please add an image.");
             }
 
@@ -264,41 +268,40 @@
             const container = isPreview ? document.getElementById('preview-window') : window;
             if (targetImg) targetImg.style.display = 'block';
 
-            const images = imagesArr || JSON.parse(decodeURIComponent(params.get('imgs')));
-            const speedBase = parseInt(settings?.v || params.get('v')) || 180;
+            const imgs = imagesArr || JSON.parse(decodeURIComponent(params.get('imgs')));
+            const speed = parseInt(settings?.v || params.get('v')) || 180;
             const effect = settings?.e || params.get('e');
-            const switchMs = parseInt(settings?.t || params.get('t')) || 0;
+            const swap = parseInt(settings?.t || params.get('t')) || 0;
 
-            let x = 20, y = 20, dx = speedBase, dy = speedBase, currentIdx = 0, isSlowing = false, lastSwitch = Date.now();
+            let x = 20, y = 20, dx = speed, dy = speed, idx = 0, slow = false, lastSw = Date.now();
             targetImg.crossOrigin = "anonymous";
-            targetImg.src = images[currentIdx];
+            targetImg.src = images[idx];
 
-            function animate(currentTime) {
-                const deltaTime = (currentTime - lastFrameTime) / 1000;
-                lastFrameTime = currentTime;
+            function animate(now) {
+                const dt = (now - lastFrameTime) / 1000;
+                lastFrameTime = now;
                 const w = isPreview ? container.clientWidth : container.innerWidth;
                 const h = isPreview ? container.clientHeight : container.innerHeight;
                 const iw = targetImg.clientWidth || 60; 
                 const ih = targetImg.clientHeight || 60;
-                const mult = isSlowing ? 0.2 : 1;
 
-                x += dx * deltaTime * mult; y += dy * deltaTime * mult;
+                x += dx * dt * (slow ? 0.2 : 1); y += dy * dt * (slow ? 0.2 : 1);
 
-                let hitX = (x + iw >= w || x <= 0);
-                let hitY = (y + ih >= h || y <= 0);
+                let hX = (x + iw >= w || x <= 0);
+                let hY = (y + ih >= h || y <= 0);
 
-                if (hitX && hitY) triggerCelebration(effect, isPreview ? container : document.body, targetImg, (s) => isSlowing = s);
+                if (hX && hY) triggerCelebration(effect, isPreview ? container : document.body, targetImg, (s) => slow = s);
 
                 // COLLISION BUFFER
-                if (hitX) { dx = -dx; x = Math.max(0, Math.min(x, w - iw)); }
-                if (hitY) { dy = -dy; y = Math.max(0, Math.min(y, h - ih)); }
+                if (hX) { dx = -dx; x = Math.max(0, Math.min(x, w - iw)); }
+                if (hY) { dy = -dy; y = Math.max(0, Math.min(y, h - ih)); }
 
-                if ((hitX || hitY) && images.length > 1) {
-                    const now = Date.now();
-                    if (switchMs === 0 || (now - lastSwitch >= switchMs)) {
+                if ((hX || hY) && images.length > 1) {
+                    const timeDiff = Date.now() - lastSw;
+                    if (swap === 0 || (timeDiff >= swap)) {
                         currentIdx = (currentIdx + 1) % images.length;
-                        targetImg.src = images[currentIdx];
-                        lastSwitch = now;
+                        targetImg.src = images[idx];
+                        lastSw = Date.now();
                     }
                 }
                 targetImg.style.transform = `translate3d(${x}px, ${y}px, 0)`;
@@ -311,18 +314,18 @@
         }
 
         // CELEBRATION TRIGGER
-        function triggerCelebration(type, body, targetImg, setSlowing) {
+        function triggerCelebration(t, b, i, setS) {
             const effects = ['confetti', 'flash', 'shake', 'invert', 'rainbow', 'zoom'];
-            const sel = type === 'random' ? effects[Math.floor(Math.random() * effects.length)] : type;
+            const sel = t === 'random' ? effects[Math.floor(Math.random() * effects.length)] : t;
             
             if (sel === 'confetti') confetti({ particleCount: 200, spread: 90, origin: { y: 0.7 } });
-            else if (sel === 'flash') { body.style.backgroundColor = 'white'; setTimeout(() => body.style.backgroundColor = 'transparent', 150); }
-            else if (sel === 'shake') { body.classList.add('shake-active'); setTimeout(() => body.classList.remove('shake-active'), 500); }
-            else if (sel === 'invert') { targetImg.classList.add('invert-active'); setTimeout(() => targetImg.classList.remove('invert-active'), 400); }
-            else if (sel === 'zoom') { setSlowing(true); targetImg.classList.add('zoom-active'); setTimeout(() => { setSlowing(false); targetImg.classList.remove('zoom-active'); }, 1000); }
+            else if (sel === 'flash') { b.style.backgroundColor = 'white'; setTimeout(() => b.style.backgroundColor = 'transparent', 150); }
+            else if (sel === 'shake') { b.classList.add('shake-active'); setTimeout(() => b.classList.remove('shake-active'), 500); }
+            else if (sel === 'invert') { i.classList.add('invert-active'); setTimeout(() => i.classList.remove('invert-active'), 400); }
+            else if (sel === 'zoom') { setS(true); i.classList.add('zoom-active'); setTimeout(() => { setS(false); i.classList.remove('zoom-active'); }, 1000); }
             else if (sel === 'rainbow') {
                 let c = 0, colors = ['#ff0000', '#ffa500', '#ffff00', '#008000', '#0000ff', '#4b0082'];
-                let iv = setInterval(() => { body.style.backgroundColor = colors[c++]; if (c >= colors.length) { clearInterval(iv); body.style.backgroundColor = 'transparent'; } }, 120);
+                let iv = setInterval(() => { b.style.backgroundColor = colors[c++]; if (c >= colors.length) { clearInterval(iv); b.style.backgroundColor = 'transparent'; } }, 120);
             }
         }
 
