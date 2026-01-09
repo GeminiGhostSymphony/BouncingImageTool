@@ -88,8 +88,8 @@
 
             <!-- BEHAVIOR -->
             <div class="card">
-                <h3>Corner Hit Celebration Effect</h3>
-                <label>Corner Hit Effect</label>
+                <h3>Effects & Speeds Settings</h3>
+                <label>Corner Hit Celebration Effect</label>
                 <select id="effectType">
                     <option value="none">No Celebration</option>
                     <option value="confetti">Confetti Cannon</option>
@@ -296,9 +296,10 @@
                 tempCanvas.width = 800; tempCanvas.height = 600;
     
                 const logo = new Image(); logo.crossOrigin = "Anonymous"; logo.src = currentImages[0];
+                const speed = parseFloat(document.getElementById('imgSpeed').value) || 1;
     
                 logo.onload = () => {
-                    let x = 40, y = 40, dx = 250, dy = 250;
+                    let x = 40, y = 40, dx = speed, dy = speed;
                     for (let i = 0; i < 60; i++) {
                         ctx.fillStyle = document.getElementById('gifBg').value; ctx.fillRect(0,0,800,600);
                         x += dx * 0.08; y += dy * 0.08;
