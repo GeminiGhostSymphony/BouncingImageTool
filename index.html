@@ -336,7 +336,7 @@
             const effect = settings?.e || params.get('e');
             const swap = parseInt(settings?.t || params.get('t')) || 0;
 
-            let x = 20, y = 20, dx = speed, dy = speed, idx = 0, slow = false, lastSw = Date.now();
+            let x = 20, y = 20, dx = 1, dy = 1, idx = 0, slow = false, lastSw = Date.now();
             targetImg.crossOrigin = "anonymous";
             targetImg.style.display = 'block';
             targetImg.src = imgs[idx];
@@ -350,16 +350,16 @@
                 const dt = Math.min((now - lastFrameTime) / 1000, 0.1); // Cap dt to prevent jumps
                 lastFrameTime = now;
 
+                const w = isPreview ? container.clientWidth : window.innerWidth;
+                const h = isPreview ? container.clientHeight : window.innerHeight;
+                const iw = targetImg.clientWidth || 80;
+                const ih = targetImg.clientHeight || 80;
+
                 const baseSpeed = isPreview 
                     ? (parseFloat(document.getElementById('imgSpeed').value) || 0) 
                     : (parseFloat(params.get('v')) || 1);
                 
-                const speed = baseSpeed * (w * 0.1); // Normalize speed to percentage screen width per second
-                
-                const w = isPreview ? container.clientWidth : window.innerWidth;
-                const h = isPreview ? container.clientHeight : window.innerHeight;
-                const iw = targetImg.clientWidth || 80
-                const ih = targetImg.clientHeight || 80;
+                const speed = baseSpeed * w; // Normalize speed to percentage screen width per second
 
                 if (speed > 0) {
                     x += dx * speed * dt * (slow ? 0.2 : 1);
