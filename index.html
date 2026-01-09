@@ -174,6 +174,7 @@
                     const wrapper = document.createElement('div');
                     wrapper.className = 'upload-row'; 
                     wrapper.draggable = true;
+                    wrapper.dataset.blobs = JSON.stringify(blobGroup); 
                     wrapper.style.padding = '12px';
                     wrapper.style.marginBottom = '10px';
                     wrapper.style.border = '1px solid #444';
@@ -212,9 +213,12 @@
                         e.preventDefault();
                         const container = document.getElementById('file-input-container');
                         const dragging = document.querySelector('.upload-row[style*="opacity: 0.5"]');
+                        if (!dragging || dragging === wrapper) return;
+                        
                         const children = [...container.querySelectorAll('.upload-row')];
                         const currIdx = children.indexOf(wrapper);
                         const dragIdx = children.indexOf(dragging);
+                        
                         if (currIdx > dragIdx) wrapper.after(dragging);
                         else wrapper.before(dragging);
                     };
@@ -224,8 +228,6 @@
                     container.insertBefore(wrapper, container.firstChild);
 
                     el.value = null;
-                    
-                    // Hide the used input so you can't re-upload in the same slot
                     el.style.display = 'none';
         
                     // Create the next fresh input row
@@ -270,6 +272,8 @@
         async function generateContent() {
             const urlInput = document.getElementById('urlInput');
             const webUrls = urlInput ? urlInput.value.split('\n').map(u => u.trim()).filter(u => u !== "") : [];
+            const pMsg = document.getElementById('preview-msg');
+            let pImg = document.getElementById('preview-img');
 
             currentImages = [...localAssets, ...webUrls];
             
@@ -278,15 +282,20 @@
                 if (animationId) cancelAnimationFrame(animationId);
                 if (pImg) {
                     pImg.style.display = 'none';
-                    pImg.src = ""; // Clear source to stop "ghosting"
+                    pImg.src = ""; 
                 }
+                document.getElementById('results-area').style.display = 'none';
                 return;
             }
 
-            if (pImg) {
-                pImg.style.display = 'block';
-                pImg.src = currentImages[0]; 
+            if (!pImg) {
+                const windowDiv = document.getElementById('preview-window');
+                windowDiv.innerHTML = '<img id="preview-img" style="position:absolute; width:60px; guilt-change:transform; transform-origin: top left;">';
+                pImg = document.getElementById('preview-img');
             }
+
+            pImg.style.display = 'block';
+            pImg.src = currentImages[0];
 
             const settings = {
                 imgs: encodeURIComponent(JSON.stringify(currentImages)),
@@ -310,15 +319,6 @@
             
             document.getElementById('results-area').style.display = 'block';
             if (pMsg) pMsg.style.display = 'none';
-            
-            document.getElementById('preview-msg').style.display = 'none';
-
-            let pImg = document.getElementById('preview-img');
-            if (!pImg) {
-                document.getElementById('preview-window').innerHTML = '<img id="preview-img" style="position:absolute; width:60px; will-change:transform; transform-origin: top left;">';
-                pImg = document.getElementById('preview-img');
-            }
-            pImg.style.display = 'block';
 
             startLiveMode(true, settings, currentImages);
         }
