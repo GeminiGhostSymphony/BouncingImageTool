@@ -17,17 +17,20 @@
         }
 
         /* --- BASE LAYOUT --- */
-        body { 
-            margin: 0; padding: 0; overflow: hidden; background-color: transparent; 
+        html, body { 
+            height: 100%; width: 100%; margin: 0; padding: 0;
+            background-color: var(--bg); overflow-y: auto; 
             font-family: 'Inter', system-ui, sans-serif; color: var(--text); 
         }
 
         /* --- MODULAR INTERFACE --- */
-        #setup-ui { background: var(--bg); min-height: 100vh; padding: 40px; display: none; box-sizing: border-box; overflow-y: auto; }
+        #setup-ui { min-height: 100vh; padding: 40px; display: none; box-sizing: border-box;; }
         .bento-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
         .card { background: var(--card); padding: 24px; border-radius: 16px; border: 1px solid #333; transition: border-color 0.2s ease; }
         .card:hover { border-color: var(--accent); }
+        .header-card { grid-column: span 2; padding: 16px 24px; display: flex; flex-direction: column; justify-content: center; min-height: auto; }
         h1, h3 { color: var(--accent); margin-top: 0; letter-spacing: -0.5px; }
+        h1 { font-size: 1.8em; margin-bottom: 5px; }
         label { display: block; font-weight: 600; margin-bottom: 4px; color: var(--muted); font-size: 0.8em; text-transform: uppercase; }
         .help-label { font-size: 0.75em; color: var(--muted); margin-bottom: 12px; display: block; line-height: 1.4; }
 
@@ -41,7 +44,7 @@
         /* --- PREVIEW & OUTPUT --- */
         #preview-window { border: 2px dashed #444; border-radius: 16px; height: 320px; position: relative; overflow: hidden; background: #000; }
         .output-box { background: #000; color: #00ff41; padding: 12px; border-radius: 10px; font-family: monospace; word-break: break-all; border: 1px solid #333; max-height: 80px; overflow-y: auto; font-size: 0.75em; margin-bottom: 15px; cursor: copy; }
-        .url-warning { color: var(--err); font-size: 0.8em; margin-top: -10px; margin-bottom: 10px; display: none; }
+        .url-warning { color: var(--err); font-size: 0.8em; margin-top: -10px; margin-bottom: 10px; display: none; line-height: 1.4; }
 
         /* --- GPU ANIMATIONS --- */
         #bouncing-image { position: absolute; display: none; pointer-events: none; will-change: transform; transform-origin: top left; }
@@ -57,7 +60,7 @@
     <!-- UI: SETUP INTERFACE -->
     <div id="setup-ui">
         <div class="bento-grid">
-            <div class="card" style="grid-column: span 2;">
+            <div class="card header-card">
                 <h1>Bouncing Image Generator (DVD Logo Style)</h1>
                 <p style="color: var(--muted); font-size: 0.9em; margin: 0;">Free GIF & streaming overlay generator by GeminiGhostSymphony.</p>
             </div>
@@ -110,7 +113,7 @@
                 <div id="preview-window"><div id="preview-msg" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#444;">Add an image to begin preview.</div></div>
                 <button onclick="generateContent()" style="margin-top:20px;">Generate/Update Stream Overlay Package</button>
                 <div id="results-area" style="display:none; margin-top: 25px;">
-                    <div id="lenWarning" class="url-warning">⚠️ URL too long! Use Web URLs instead of file uploads.</div>
+                    <div id="lenWarning" class="url-warning">⚠️ URL too long! Use Web URLs instead of file uploads or use "Download Launcher" button below.</div>
                     <label>Browser Source URL (Length: <span id="urlCount">0</span>)</label>
                     <div id="generated-url" class="output-box" onclick="copyText(this)"></div>
                     <label>Clean Custom CSS</label>
@@ -200,7 +203,7 @@
             const finalUrl = `${window.location.origin}${window.location.pathname}?imgs=${settings.imgs}&v=${settings.v}&e=${settings.e}&t=${settings.t}`;
             document.getElementById('generated-url').innerText = finalUrl;
             document.getElementById('urlCount').innerText = finalUrl.length;
-            document.getElementById('lenWarning').style.display = finalUrl.length > 2000 ? 'block' : 'none';
+            document.getElementById('lenWarning').style.display = finalUrl.length > 2048 ? 'block' : 'none';
             document.getElementById('generated-css').innerText = `body { background: transparent; overflow: hidden; margin: 0; }\n#bouncing-image { will-change: transform; transform-origin: top left; }`;
             document.getElementById('results-area').style.display = 'block';
             document.getElementById('preview-msg').style.display = 'none';
