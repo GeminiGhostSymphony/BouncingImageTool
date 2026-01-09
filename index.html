@@ -320,20 +320,17 @@
             targetImg.src = imgs[idx];
 
             function animate(now) {
-                const dt = (now - lastFrameTime) / 1000;
-                lastFrameTime = now;
+                const dt = (now - lastFrameTime) / 1000; lastFrameTime = now;
+                const speed = isPreview ? (parseInt(document.getElementById('imgSpeed').value) || 180) : (parseInt(params.get('v')) || 180);
                 const w = isPreview ? container.clientWidth : window.innerWidth;
                 const h = isPreview ? container.clientHeight : window.innerHeight;
-                const iw = targetImg.clientWidth || 60; 
-                const ih = targetImg.clientHeight || 60;
-        
-                x += dx * dt * (slow ? 0.2 : 1); y += dy * dt * (slow ? 0.2 : 1);
-        
-                let hX = (x + iw >= w || x <= 0);
-                let hY = (y + ih >= h || y <= 0);
-        
+                const iw = targetImg.clientWidth || 80, ih = targetImg.clientHeight || 80;
+
+                x += dx * speed * dt * (slow ? 0.2 : 1);
+                y += dy * speed * dt * (slow ? 0.2 : 1);
+                
+                let hX = (x + iw >= w || x <= 0), hY = (y + ih >= h || y <= 0);
                 if (hX && hY) triggerCelebration(effect, isPreview ? container : document.body, targetImg, (s) => slow = s);
-        
                 if (hX) { dx = -dx; x = Math.max(0, Math.min(x, w - iw)); }
                 if (hY) { dy = -dy; y = Math.max(0, Math.min(y, h - ih)); }
         
