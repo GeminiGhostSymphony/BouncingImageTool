@@ -204,6 +204,19 @@
                         //}
                         syncAndRefresh();
                     };
+
+                    wrapper.ondragstart = (e) => { e.dataTransfer.setData('text/plain', null); wrapper.style.opacity = '0.5'; };
+                    wrapper.ondragend = () => { wrapper.style.opacity = '1'; syncAndRefresh(); };
+                    wrapper.ondragover = (e) => {
+                        e.preventDefault();
+                        const container = document.getElementById('file-input-container');
+                        const dragging = document.querySelector('.upload-row[style*="opacity: 0.5"]');
+                        const children = [...container.querySelectorAll('.upload-row')];
+                        const currIdx = children.indexOf(wrapper);
+                        const dragIdx = children.indexOf(dragging);
+                        if (currIdx > dragIdx) wrapper.after(dragging);
+                        else wrapper.before(dragging);
+                    };
                     
                     wrapper.appendChild(delBtn);
                     const container = document.getElementById('file-input-container');
