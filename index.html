@@ -346,7 +346,7 @@
 
                 // Dynamically determine canvas size
                 const preSpeed = parseFloat(document.getElementById('imgSpeed').value) || 15;
-                const preDuration = 5; 
+                const preDuration = 7.5; 
                 const idealSize = Math.round(((preSpeed * 8 * preDuration) / 2) + 40 + 200);
                 const finalW = Math.max(400, Math.min(1000, idealSize));
                 const finalH = Math.max(400, Math.min(1000, idealSize));
@@ -388,7 +388,7 @@
                 
                 for (let i = 0; i < totalFrames; i++) {
                     const loopSpeed = parseFloat(document.getElementById('imgSpeed').value) || 15;
-                    const loopDuration = 5;
+                    const loopDuration = 7.5;
                     const loopDt = 30 / 1000;
                     const loopSimTime = i * loopDt;
                     const targetSize = 200;
@@ -399,6 +399,12 @@
                     const ratio = currentLogo.naturalWidth / currentLogo.naturalHeight;
                     let iw = ratio > 1 ? targetSize : targetSize * ratio;
                     let ih = ratio > 1 ? targetSize / ratio : targetSize;
+
+                    const horizontalLaps = 2;
+                    const verticalLaps = 3;
+        
+                    const lapDistX = (finalW - iw - loopStartX) * 2;
+                    const lapDistY = (finalH - ih - loopStartY) * 2;
 
                     const adjustedVX = ((finalW - iw - loopStartX) * 2) / loopDuration;
                     const adjustedVY = ((finalH - ih - loopStartY) * 2) / loopDuration;
