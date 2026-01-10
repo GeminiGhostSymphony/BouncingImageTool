@@ -78,7 +78,7 @@
                 <h3>Image Assets</h3>
                 <label>Image URLs (one per line)</label>
                 <textarea id="urlInput" rows="2" placeholder="Paste URLs here..."></textarea>
-                <label>Upload Images</label>
+                <label>Upload Images (DO NOT use for overlay, only for GIF & preview)</label>
                 <div id="file-input-container">
                     <input type="file" class="file-input-row" accept="image/*" multiple>
                 </div>
@@ -130,6 +130,7 @@
                     <label>Dynamic Custom CSS</label>
                     <div id="generated-css" class="output-box" onclick="copyText(this)"></div>
                     <small style="color: var(--muted); display: block; margin-top: -5px; margin-bottom: 15px;">(Click box above to copy URL to clipboard)</small>
+                    <label>For overlays, download the HTML file below and import into streaming software as a browser source with the above CSS.</label>
                     <button class="download-btn" onclick="downloadFile()">Download Launcher HTML</button>
                 </div>
             </div>
