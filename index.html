@@ -401,22 +401,16 @@
                     let iw = ratio > 1 ? targetSize : targetSize * ratio;
                     let ih = ratio > 1 ? targetSize / ratio : targetSize;
 
-                    const rangeX = finalW - iw - loopStartX;
-                    const rangeY = finalH - ih - loopStartY;
-                    
-                    const progress = i / totalFrames;
+                    const vX = ((finalW - iw - startX) * 4) / loopDuration;
+                    const vY = ((finalH - ih - startY) * 6) / loopDuration;
+        
+                    x += dx * vX * loopDt;
+                    y += dy * vY * loopDt;
 
-                    const waveX = 1 - Math.abs(((progress * 2) % 2) - 1);
-                    const waveY = 1 - Math.abs(((progress * 3) % 2) - 1);
-
-                    x = loopStartX + (waveX * rangeX);
-                    y = loopStartY + (waveY * rangeY);
-
-                    dx = ((progress * 2) % 2) < 1 ? 1 : -1;
-                    dy = ((progress * 3) % 2) < 1 ? 1 : -1;
-
-                    const isAtEdgeX = (waveX >= 0.99 || waveX <= 0.01);
-                    const isAtEdgeY = (waveY >= 0.99 || waveY <= 0.01);
+                    if (x + iw >= finalW) { dx = -1; x = finalW - iw; } 
+                    else if (x <= 0) { dx = 1; x = 0; }
+                    if (y + ih >= finalH) { dy = -1; y = finalH - ih; } 
+                    else if (y <= 0) { dy = 1; y = 0; }
         
                     // Swap Logic
                     const shouldSwap = (swapSecs === 0 && (x <= 0 || x + iw >= finalW || y <= 0 || y + ih >= finalH)) || 
