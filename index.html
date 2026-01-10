@@ -352,7 +352,7 @@
                 const finalH = Math.max(400, Math.min(1000, idealSize));
 
                 const gif = new GIF({ 
-                    workers: 2, quality: 1, width: 800, height: 600, 
+                    workers: 2, quality: 1, width: finalW, height: finalH, 
                     workerScript: workerUrl, dither: 'FloydSteinberg'
                 });
 
