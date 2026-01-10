@@ -154,16 +154,25 @@
         let lastFrameTime = performance.now();
         let animationId = null; // Track animation to prevent duplicates
         
-        let previewConfetti, liveConfetti;
-        document.addEventListener('DOMContentLoaded', () => {
-            const pCanvas = document.getElementById('preview-confetti-canvas');
-            const lCanvas = document.getElementById('live-confetti-canvas');
-        
-            if (previewCanvas && liveCanvas) {
-                previewConfetti = confetti.create(pCanvas, { resize: true, useWorker: false });
-                liveConfetti = confetti.create(lCanvas, { resize: true, useWorker: false });
+        let previewConfetti; 
+        let liveConfetti;
+        const pCanvas = document.getElementById('preview-canvas');
+        const lCanvas = document.getElementById('live-canvas');
+
+        function initConfetti() {
+            const pCanvasEl = document.getElementById('preview-canvas');
+            const lCanvasEl = document.getElementById('live-canvas');
+            
+            if (pCanvasEl && !previewConfetti) {
+                previewConfetti = confetti.create(pCanvasEl, { resize: true, useWorker: false });
             }
-        });
+            if (lCanvasEl && !liveConfetti) {
+                liveConfetti = confetti.create(lCanvasEl, { resize: true, useWorker: false });
+            }
+        }
+
+        initConfetti();
+        window.addEventListener('DOMContentLoaded', initConfetti);
 
         if (params.has('imgs')) { 
             startLiveMode(false); 
@@ -600,7 +609,7 @@
                 effect, 
                 previewContainer, 
                 previewImg, 
-                (isSlow) => { }
+                (s) => { }
             );
         }
 
