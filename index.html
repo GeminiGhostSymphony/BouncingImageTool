@@ -344,6 +344,13 @@
                 const workerBlob = new Blob([workerCode], { type: 'application/javascript' });
                 const workerUrl = URL.createObjectURL(workerBlob);
 
+                // Dynamically determine canvas size
+                const preSpeed = parseFloat(document.getElementById('imgSpeed').value) || 15;
+                const preDuration = 5; 
+                const idealSize = Math.round(((preSpeed * 8 * preDuration) / 2) + 40 + 200);
+                const finalW = Math.max(400, Math.min(1000, idealSize));
+                const finalH = Math.max(400, Math.min(1000, idealSize));
+
                 const gif = new GIF({ 
                     workers: 2, quality: 1, width: 800, height: 600, 
                     workerScript: workerUrl, dither: 'FloydSteinberg'
@@ -351,7 +358,7 @@
 
                 const tempCanvas = document.createElement('canvas');
                 const ctx = tempCanvas.getContext('2d');
-                tempCanvas.width = 800; tempCanvas.height = 600;
+                tempCanvas.width = finalW; tempCanvas.height = finalH;
 
                 ctx.imageSmoothingEnabled = true;
                 ctx.imageSmoothingQuality = 'high';
@@ -376,48 +383,40 @@
                 const delay = 30; 
                 const dt = delay / 1000; 
 
-                const totalDuration = 10;
+                const totalDuration = 5;
                 const totalFrames = Math.round((totalDuration * 1000) / delay);
                 
                 for (let i = 0; i < totalFrames; i++) {
-                    const rawSpeed = parseFloat(document.getElementById('imgSpeed').value);
-                    const baseSpeed = isNaN(rawSpeed) ? 15 : rawSpeed;
-                    const velocity = baseSpeed * (800 / 1000);
+                    const loopSpeed = parseFloat(document.getElementById('imgSpeed').value) || 15;
+                    const loopDuration = 5;
+                    const loopDt = 30 / 1000;
+                    const loopSimTime = i * loopDt;
+                    const targetSize = 200;
+                    const loopStartX = 40, loopStartY = 40;
                     const swapSecs = parseFloat(document.getElementById('switchTime').value) || 0;
-                    const simulatedTime = i * dt; // Current timestamp
-                    const targetSize = 200; 
 
                     let currentLogo = loadedImgs[imgIdx];
                     const ratio = currentLogo.naturalWidth / currentLogo.naturalHeight;
                     let iw = ratio > 1 ? targetSize : targetSize * ratio;
                     let ih = ratio > 1 ? targetSize / ratio : targetSize;
 
-                    const returnTime = 8.5; 
+                    const adjustedVX = ((finalW - iw - loopStartX) * 2) / loopDuration;
+                    const adjustedVY = ((finalH - ih - loopStartY) * 2) / loopDuration;
+        
+                    x += dx * adjustedVX * loopDt;
+                    y += dy * adjustedVY * loopDt;
 
-                    if (simulatedTime < returnTime) {
-                        const velocity = baseSpeed * 8;
-                        x += dx * velocity * dt;
-                        y += dy * velocity * dt;
+                    if (x + iw >= finalW) { dx = -1; x = finalW - iw; } 
+                    else if (x <= 0) { dx = 1; x = 0; }
+                    if (y + ih >= finalH) { dy = -1; y = finalH - ih; } 
+                    else if (y <= 0) { dy = 1; y = 0; }
         
-                        let hitX = false, hitY = false;
-                        if (x + iw >= 800) { dx = -1; x = 800 - iw; hitX = true; } 
-                        else if (x <= 0) { dx = 1; x = 0; hitX = true; }
-                        if (y + ih >= 600) { dy = -1; y = 600 - ih; hitY = true; } 
-                        else if (y <= 0) { dy = 1; y = 0; hitY = true; }
-        
-                        // Swap Logic
-                        const shouldSwapTimed = swapSecs > 0 && (simulatedTime - lastSwapTime) >= swapSecs; 
-                        const shouldSwapOnBounce = swapSecs === 0 && (hitX || hitY);
-                        if (shouldSwapTimed || shouldSwapOnBounce) {
-                            if (loadedImgs.length > 1) {
-                                imgIdx = (imgIdx + 1) % loadedImgs.length;
-                                lastSwapTime = simulatedTime;
-                            }
-                        }
-                    } else {
-                        const framesLeft = totalFrames - i;
-                        x += (startX - x) / framesLeft;
-                        y += (startY - y) / framesLeft;
+                    // Swap Logic
+                    const shouldSwap = (swapSecs === 0 && (x <= 0 || x + iw >= finalW || y <= 0 || y + ih >= finalH)) || 
+                                       (swapSecs > 0 && (loopSimTime - lastSwapTime) >= swapSecs);
+                    if (shouldSwap && loadedImgs.length > 1) {
+                        imgIdx = (imgIdx + 1) % loadedImgs.length;
+                        lastSwapTime = loopSimTime;
                     }
                     
                     ctx.fillStyle = document.getElementById('gifBg').value; 
