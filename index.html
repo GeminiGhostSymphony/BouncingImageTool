@@ -141,7 +141,7 @@
 
     <!-- ACTIVE OVERLAY ELEMENT -->
     <img id="bouncing-image" src="" alt="Bouncing Image">
-    <canvas id="live-confetti-canvas" style="position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:999;"></canvas>
+    <canvas id="live-confetti-canvas" style="position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:999; background:transparent;"></canvas>
 
     <script>
         // INITIALIZATION & ROUTING
@@ -152,10 +152,18 @@
         let lastFrameTime = performance.now();
         let animationId = null; // Track animation to prevent duplicates
         
-        const previewConfettiCanvas = document.getElementById('preview-confetti-canvas');
-        const liveConfettiCanvas = document.getElementById('live-confetti-canvas');
-        const previewConfetti = confetti.create(previewCanvas, { resize: false, useWorker: false });
-        const liveConfetti = confetti.create(liveCanvas, { resize: false, useWorker: false });
+        let previewConfetti, liveConfetti;
+        document.addEventListener('DOMContentLoaded', () => {
+            const previewCanvas = document.getElementById('preview-confetti-canvas');
+            const liveCanvas = document.getElementById('live-confetti-canvas');
+        
+            if (previewCanvas && liveCanvas) {
+                // Initialize instances ONLY after the DOM is ready
+                // useWorker: false prevents the "Black Screen" rendering bug in many browsers
+                previewConfetti = confetti.create(previewCanvas, { resize: false, useWorker: false });
+                liveConfetti = confetti.create(liveCanvas, { resize: false, useWorker: false });
+            }
+        });
 
         if (params.has('imgs')) { 
             startLiveMode(false); 
@@ -547,17 +555,19 @@
             if (sel === 'confetti') {
                 const isPreview = (b.id === 'preview-window');
                 const fire = isPreview ? previewConfetti : liveConfetti;
-                const targetCanvas = isPreview ? previewCanvas : liveCanvas;
+                const targetCanvas = isPreview ? document.getElementById('preview-confetti-canvas') : document.getElementById('live-confetti-canvas');
         
-                targetCanvas.width = b.clientWidth || b.innerWidth || window.innerWidth;
-                targetCanvas.height = b.clientHeight || b.innerHeight || window.innerHeight;
+                if (fire && targetCanvas) {
+                    targetCanvas.width = isPreview ? b.clientWidth : window.innerWidth;
+                    targetCanvas.height = isPreview ? b.clientHeight : window.innerHeight;
         
-                fire({ 
-                    particleCount: 150, 
-                    spread: 70, 
-                    origin: { y: 0.6 },
-                    zIndex: 1000 
-                });
+                    fire({ 
+                        particleCount: 150, 
+                        spread: 70, 
+                        origin: { y: 0.6 },
+                        zIndex: 1000 
+                    });
+                }
             } 
             else if (sel === 'flash') { b.style.backgroundColor = 'white'; setTimeout(() => b.style.backgroundColor = 'transparent', 150); }
             else if (sel === 'shake') { b.classList.add('shake-active'); setTimeout(() => b.classList.remove('shake-active'), 500); }
