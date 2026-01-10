@@ -111,9 +111,8 @@
             <div class="card">
                 <h3>GIF Export</h3>
                 <label>Background Color</label>
-                <input type="color" id="gifBg" value="#000000">
-                <label>Duration (Seconds, Max 10)</label>
-                <input type="number" id="gifDuration" value="5" min="1" max="10">
+                <input type="color" id="gifBg" value="#000000" style="width: 60px; flex-shrink: 0; cursor: pointer;">
+                <input type="text" id="gifBgHex" value="#000000" placeholder="#000000" maxlength="7" style="flex-grow: 1; margin-bottom: 0; font-family: monospace;">
                 <button onclick="exportToGif()" id="gifBtn">Download GIF</button>
             </div>
 
@@ -163,6 +162,24 @@
             ['urlInput', 'imgSpeed', 'switchTime', 'effectType'].forEach(id => {
                 document.getElementById(id).addEventListener('input', generateContent);
             });
+
+            const colorPicker = document.getElementById('gifBg');
+            const hexInput = document.getElementById('gifBgHex');
+        
+            if (colorPicker && hexInput) {
+                colorPicker.addEventListener('input', () => {
+                    hexInput.value = colorPicker.value.toUpperCase();
+                });
+        
+                hexInput.addEventListener('input', () => {
+                    let val = hexInput.value;
+                    if (!val.startsWith('#')) val = '#' + val;
+                    if (/^#[0-9A-F]{6}$/i.test(val)) {
+                        colorPicker.value = val;
+                    }
+                });
+            }
+            
             initFileInput(document.querySelector('.file-input-row'));
             document.getElementById('urlInput').addEventListener('input', generateContent);
             document.getElementById('imgSpeed').addEventListener('input', generateContent);
@@ -333,7 +350,6 @@
             const originalText = "Download GIF";
             btn.innerText = "Encoding..."; btn.disabled = true;
 
-            const duration = Math.min(document.getElementById('gifDuration').value, 10);
             const bgColor = document.getElementById('gifBg').value;
 
             try {
@@ -432,7 +448,6 @@
                     ctx.fillRect(0, 0, finalW, finalH);
 
                     ctx.save();
-                    //ctx.translate(x, y);
                     ctx.drawImage(currentLogo, Math.trunc(x), Math.trunc(y), iw, ih);
                     ctx.restore();
                     
