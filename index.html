@@ -383,7 +383,7 @@
 
                 const gif = new GIF({ 
                     workers: 2, quality: 1, width: finalW, height: finalH, 
-                    workerScript: workerUrl, dither: 'FloydSteinberg'
+                    workerScript: workerUrl, dither: false
                 });
 
                 const tempCanvas = document.createElement('canvas');
@@ -413,6 +413,7 @@
                 const dt = delay / 1000; 
                 
                 for (let i = 0; i < totalFrames; i++) {
+                    const loopBg = document.getElementById('gifBg').value;
                     const loopSpeed = parseFloat(document.getElementById('imgSpeed').value) || 15;
                     const loopDt = 30 / 1000;
                     const loopSimTime = i * loopDt;
@@ -447,12 +448,18 @@
                     const currentX = relX < (lapSizeX / 2) ? relX : lapSizeX - relX;
                     const currentY = relY < (lapSizeY / 2) ? relY : lapSizeY - relY;
 
+                    ctx.fillStyle = loopBg;
+                    ctx.fillRect(0, 0, finalW, finalH);
+
+                    ctx.save();
+                    ctx.drawImage(currentLogo, Math.trunc(x), Math.trunc(y), iw, ih);
+                    ctx.restore();
+                    
+                    gif.addFrame(ctx, { copy: true, delay: delay });
+
                     const hitX = (x <= 0.5 || x + iw >= finalW - 0.5);
                     const hitY = (y <= 0.5 || y + ih >= finalH - 0.5);
 
-                    ctx.fillStyle = document.getElementById('gifBg').value; 
-                    ctx.fillRect(0, 0, finalW, finalH);
-        
                     // Swap Logic
                     const shouldSwap = (swapSecs === 0 && (x <= 0 || x + iw >= finalW || y <= 0 || y + ih >= finalH)) || 
                                        (swapSecs > 0 && (loopSimTime - lastSwapTime) >= swapSecs);
@@ -460,12 +467,6 @@
                         imgIdx = (imgIdx + 1) % loadedImgs.length;
                         lastSwapTime = loopSimTime;
                     }
-
-                    ctx.save();
-                    ctx.drawImage(currentLogo, Math.trunc(x), Math.trunc(y), iw, ih);
-                    ctx.restore();
-                    
-                    gif.addFrame(ctx, { copy: true, delay: delay });
                 }
                     
                 gif.on('finished', (blob) => {
