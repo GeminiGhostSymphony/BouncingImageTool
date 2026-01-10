@@ -347,7 +347,7 @@
                 // Dynamically determine canvas size
                 const userSpeed = parseFloat(document.getElementById('imgSpeed').value) || 15;
                 const velocity = userSpeed * 8;
-                const duration = 7.5; 
+                const duration = 9; 
                 const totalDistance = velocity * duration;
                 
                 const finalW = Math.max(400, Math.min(1000, Math.round((totalDistance / 4) + 200 + 40)));
@@ -385,11 +385,11 @@
                 const delay = 30; 
                 const dt = delay / 1000; 
 
-                const totalDuration = 7.5;
+                const totalDuration = 9;
                 const totalFrames = Math.round((totalDuration * 1000) / delay);
                 
                 for (let i = 0; i < totalFrames; i++) {
-                    const loopDuration = 7.5;
+                    const loopDuration = 9;
                     const loopDt = 30 / 1000;
                     const loopSimTime = i * loopDt;
                     const targetSize = 200;
