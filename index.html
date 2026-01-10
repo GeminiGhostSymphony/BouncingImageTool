@@ -100,9 +100,12 @@
                     <option value="zoom">Zoom-in</option>
                     <option value="random">Random Selection of Above</option>
                 </select>
+                <button onclick="testCelebrationUI()" style="background: #444; color: #fff; font-size: 11px; padding: 8px; margin-bottom: 15px;">Test Selected Effect</button>
                 <div style="display:flex; gap:10px;">
-                    <div style="flex:1;"><label>Speed (px/second)</label><input type="number" id="imgSpeed" value="15" step="1"></div>
-                    <div style="flex:1;"><label>Swap Time (Seconds, 0 = Every Hit)</label><input type="number" id="switchTime" value="0" step="0.5"></div>
+                    <div style="flex:1;"><label>Speed</label><input type="number" id="imgSpeed" value="15" step="1" min="0" oninput="if(this.value<0)this.value=0"></div>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;"><label>Swap Time (Seconds, 0 = Every Hit)</label><input type="number" id="switchTime" value="0" step="0.5" min="0" oninput="if(this.value<0)this.value=0"></div>
                 </div>
             </div>
 
@@ -111,7 +114,7 @@
                 <h3>GIF Export</h3>
                 <label>Background Color</label>
                 <input type="color" id="gifBg" value="#000000">
-                <label>Duration (Sec, Max 10)</label>
+                <label>Duration (Seconds, Max 10)</label>
                 <input type="number" id="gifDuration" value="5" min="1" max="10">
                 <button onclick="exportToGif()" id="gifBtn">Download GIF</button>
             </div>
@@ -543,6 +546,27 @@
                 let c = 0, colors = ['#ff0000', '#ffa500', '#ffff00', '#008000', '#0000ff', '#4b0082'];
                 let iv = setInterval(() => { b.style.backgroundColor = colors[c++]; if (c >= colors.length) { clearInterval(iv); b.style.backgroundColor = 'transparent'; } }, 120);
             }
+        }
+
+        // CELEBRATION TEST IN UI
+        function testCelebrationUI() {
+            const effect = document.getElementById('effectType').value;
+            const previewContainer = document.getElementById('preview-window');
+            const previewImg = document.getElementById('preview-img');
+            
+            if (effect === 'none') return;
+            if (!previewImg || previewImg.style.display === 'none') {
+                alert("Please add an image first to test effects.");
+                return;
+            }
+        
+            // Trigger celebration specifically on the preview container and image
+            triggerCelebration(
+                effect, 
+                previewContainer, 
+                previewImg, 
+                (isSlow) => { }
+            );
         }
 
         // UTILITIES
