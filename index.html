@@ -6,7 +6,6 @@
     <title>Bouncing Image Generator (DVD Logo Style) by GeminiGhostSymphony</title>
     
     <!-- EXTERNAL LIBRARIES -->
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js"></script>
     
@@ -92,7 +91,6 @@
                 <label>Corner Hit Celebration Effect</label>
                 <select id="effectType">
                     <option value="none">No Celebration</option>
-                    <option value="confetti">Confetti Cannon</option>
                     <option value="flash">Screen Flash</option>
                     <option value="shake">Screen Shake</option>
                     <option value="invert">Color Invert</option>
@@ -122,10 +120,7 @@
             <!-- PREVIEW & EXPORT -->
             <div class="card full-width">
                 <h3>Preview & Stream Export</h3>
-                <div style="position: relative; height: 320px; background: #000; border-radius: 16px; overflow: hidden;">
                 <div id="preview-window"><div id="preview-msg" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#444;">Add an image to begin preview.</div></div>
-                <canvas id="preview-confetti-canvas" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:10;"></canvas>
-                </div>
                 <button onclick="generateContent()" style="margin-top:20px;">Generate/Update Stream Overlay Package</button>
                 <div id="results-area" style="display:none; margin-top: 25px;">
                     <div id="lenWarning" class="url-warning">⚠️ URL too long! Use Web URLs instead of file uploads or use "Download Launcher" button below.</div>
@@ -143,9 +138,6 @@
 
     <!-- ACTIVE OVERLAY ELEMENT -->
     <img id="bouncing-image" src="" alt="Bouncing Image">
-    <div id="live-container" style="position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:9999; display:none;">
-        <canvas id="live-canvas" style="width:100%; height:100%;"></canvas>
-    </div>
 
     <script>
         // INITIALIZATION & ROUTING
@@ -155,24 +147,6 @@
         let localAssets = []; // Storage for local file data
         let lastFrameTime = performance.now();
         let animationId = null; // Track animation to prevent duplicates
-        
-        let previewConfetti; 
-        let liveConfetti;
-
-        function initConfetti() {
-            const pCanvasEl = document.getElementById('preview-canvas');
-            const lCanvasEl = document.getElementById('live-canvas');
-            
-            if (pCanvasEl && !previewConfetti) {
-                previewConfetti = confetti.create(pCanvasEl, { resize: false, useWorker: false });
-            }
-            if (lCanvasEl && !liveConfetti) {
-                liveConfetti = confetti.create(lCanvasEl, { resize: false, useWorker: false });
-            }
-        }
-
-        initConfetti();
-        window.addEventListener('DOMContentLoaded', initConfetti);
 
         if (params.has('imgs')) { 
             startLiveMode(false); 
@@ -224,12 +198,7 @@
                         localAssets = localAssets.filter(asset => !blobGroup.includes(asset));
                         blobGroup.forEach(url => URL.revokeObjectURL(url));
                         wrapper.remove();
-                        //currentImages = [...localAssets];
-                        //if (currentImages.length === 0) {
-                        //    if (animationId) cancelAnimationFrame(animationId);
-                        //    const targetImg = document.getElementById('preview-img');
-                        //    if (targetImg) targetImg.style.display = 'none';
-                        //}
+                        
                         syncAndRefresh();
                     };
 
@@ -337,7 +306,6 @@
             
             // Dynamic CSS logic
             let css = `#bouncing-image { position: absolute; will-change: transform; transform-origin: top left; }`;
-            css += `\n#live-confetti-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }`;
             if (settings.e === 'shake') css += `\n.shake-active { animation: shake 0.1s infinite !important; }\n@keyframes shake { 0%, 100% { transform: translate(0,0); } 25% { transform: translate(4px,4px); } 50% { transform: translate(-4px,-4px); } }`;
             if (settings.e === 'invert') css += `\n.invert-active { filter: invert(1); }`;
             if (settings.e === 'zoom') css += `\n.zoom-active { transform: scale(1.4) !important; transition: transform 0.1s ease-out; }`;
@@ -564,30 +532,12 @@
 
         // CELEBRATION TRIGGER
         function triggerCelebration(t, b, i, setS) {
-            const effects = ['confetti', 'flash', 'shake', 'invert', 'rainbow', 'zoom'];
+            const effects = ['flash', 'shake', 'invert', 'rainbow', 'zoom'];
             const sel = t === 'random' ? effects[Math.floor(Math.random() * effects.length)] : t;
 
             const resetColor = (b.id === 'preview-window') ? '#000000' : 'transparent';
             
-            if (sel === 'confetti') {
-                const isPreview = (b.id === 'preview-window');
-                const targetCanvas = document.getElementById(isPreview ? 'preview-canvas' : 'live-canvas');
-                        
-                if (targetCanvas) {
-                    targetCanvas.width = targetCanvas.offsetWidth;
-                    targetCanvas.height = targetCanvas.offsetHeight;
-
-                    
-                    const fire = confetti.create(targetCanvas, { resize: false, useWorker: false });
-                    fire({ 
-                        particleCount: 150, 
-                        spread: 70, 
-                        origin: { y: 0.6 }
-                    });
-                }
-                b.style.backgroundColor = resetColor;
-            } 
-            else if (sel === 'flash') { b.style.backgroundColor = 'white'; setTimeout(() => b.style.backgroundColor = resetColor, 150); }
+            if (sel === 'flash') { b.style.backgroundColor = 'white'; setTimeout(() => b.style.backgroundColor = resetColor, 150); }
             else if (sel === 'shake') { b.classList.add('shake-active'); setTimeout(() => b.classList.remove('shake-active'), 500); }
             else if (sel === 'invert') { i.classList.add('invert-active'); setTimeout(() => i.classList.remove('invert-active'), 400); }
             else if (sel === 'zoom') { setS(true); i.classList.add('zoom-active'); setTimeout(() => { setS(false); i.classList.remove('zoom-active'); }, 1000); }
@@ -608,8 +558,6 @@
                 alert("Please add an image first to test effects.");
                 return;
             }
-
-            if (!previewConfetti) initConfetti();
         
             triggerCelebration(
                 effect, 
