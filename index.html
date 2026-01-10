@@ -401,27 +401,24 @@
 
                     const totalDistX = (finalW - iw) * 4;
                     const totalDistY = (finalH - ih) * 6;
-
+        
                     const movedX = (totalDistX * i) / totalFrames;
                     const movedY = (totalDistY * i) / totalFrames;
-
-                    const lapSizeX = (finalW - iw - loopStartX) * 2;
-                    const lapSizeY = (finalH - ih - loopStartY) * 2;
+        
+                    const lapSizeX = (finalW - iw) * 2;
+                    const lapSizeY = (finalH - ih) * 2;
                     
                     const relX = movedX % lapSizeX;
                     const relY = movedY % lapSizeY;
+                    
+                    const x = relX < (lapSizeX / 2) ? relX : lapSizeX - relX;
+                    const y = relY < (lapSizeY / 2) ? relY : lapSizeY - relY;
         
                     const currentX = relX < (lapSizeX / 2) ? relX : lapSizeX - relX;
                     const currentY = relY < (lapSizeY / 2) ? relY : lapSizeY - relY;
 
-                    dx = relX < (lapSizeX / 2) ? 1 : -1;
-                    dy = relY < (lapSizeY / 2) ? 1 : -1;
-
-                    x = loopStartX + currentX;
-                    y = loopStartY + currentY;
-
-                    const hitX = (currentX <= 0.1 || x + iw >= finalW - 0.1);
-                    const hitY = (currentY <= 0.1 || y + ih >= finalH - 0.1);
+                    const hitX = (x <= 0.5 || x + iw >= finalW - 0.5);
+                    const hitY = (y <= 0.5 || y + ih >= finalH - 0.5);
         
                     // Swap Logic
                     const shouldSwap = (swapSecs === 0 && (x <= 0 || x + iw >= finalW || y <= 0 || y + ih >= finalH)) || 
