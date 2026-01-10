@@ -156,8 +156,6 @@
         
         let previewConfetti; 
         let liveConfetti;
-        const pCanvas = document.getElementById('preview-canvas');
-        const lCanvas = document.getElementById('live-canvas');
 
         function initConfetti() {
             const pCanvasEl = document.getElementById('preview-canvas');
@@ -566,6 +564,8 @@
         function triggerCelebration(t, b, i, setS) {
             const effects = ['confetti', 'flash', 'shake', 'invert', 'rainbow', 'zoom'];
             const sel = t === 'random' ? effects[Math.floor(Math.random() * effects.length)] : t;
+
+            const resetColor = (b.id === 'preview-window') ? '#000000' : 'transparent';
             
             if (sel === 'confetti') {
                 const isPreview = (b.id === 'preview-window');
@@ -580,15 +580,16 @@
                         origin: { y: 0.6 },
                         disableForced3d: true 
                     });
+                    b.style.backgroundColor = resetColor;
                 }
             } 
-            else if (sel === 'flash') { b.style.backgroundColor = 'white'; setTimeout(() => b.style.backgroundColor = 'transparent', 150); }
+            else if (sel === 'flash') { b.style.backgroundColor = 'white'; setTimeout(() => b.style.backgroundColor = resetColor, 150); }
             else if (sel === 'shake') { b.classList.add('shake-active'); setTimeout(() => b.classList.remove('shake-active'), 500); }
             else if (sel === 'invert') { i.classList.add('invert-active'); setTimeout(() => i.classList.remove('invert-active'), 400); }
             else if (sel === 'zoom') { setS(true); i.classList.add('zoom-active'); setTimeout(() => { setS(false); i.classList.remove('zoom-active'); }, 1000); }
             else if (sel === 'rainbow') {
                 let c = 0, colors = ['#ff0000', '#ffa500', '#ffff00', '#008000', '#0000ff', '#4b0082'];
-                let iv = setInterval(() => { b.style.backgroundColor = colors[c++]; if (c >= colors.length) { clearInterval(iv); b.style.backgroundColor = 'transparent'; } }, 120);
+                let iv = setInterval(() => { b.style.backgroundColor = colors[c++]; if (c >= colors.length) { clearInterval(iv); b.style.backgroundColor = resetColor; } }, 120);
             }
         }
 
@@ -604,7 +605,6 @@
                 return;
             }
         
-            // Trigger celebration specifically on the preview container and image
             triggerCelebration(
                 effect, 
                 previewContainer, 
