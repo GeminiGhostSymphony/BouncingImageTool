@@ -379,7 +379,7 @@
                 const ppf = Math.max(1, Math.round(userSpeed / 2.5)); 
 
                 const finalW = Math.min (1100, (ppf * totalFrames / 4) + targetSize);
-                const finalH = Math.min (1100, ppf * totalFrames / 6) + targetSize);
+                const finalH = Math.min (1100, (ppf * totalFrames / 6) + targetSize);
 
                 const gif = new GIF({ 
                     workers: 2, quality: 1, width: finalW, height: finalH, 
