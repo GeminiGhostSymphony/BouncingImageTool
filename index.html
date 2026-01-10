@@ -345,11 +345,13 @@
                 const workerUrl = URL.createObjectURL(workerBlob);
 
                 // Dynamically determine canvas size
-                const preSpeed = parseFloat(document.getElementById('imgSpeed').value) || 15;
-                const preDuration = 7.5; 
-                const idealSize = Math.round(((preSpeed * 8 * preDuration) / 2) + 40 + 200);
-                const finalW = Math.max(400, Math.min(1000, idealSize));
-                const finalH = Math.max(400, Math.min(1000, idealSize));
+                const userSpeed = parseFloat(document.getElementById('imgSpeed').value) || 15;
+                const velocity = userSpeed * 8;
+                const duration = 7.5; 
+                const totalDistance = velocity * duration;
+                
+                const finalW = Math.max(400, Math.min(1000, Math.round((totalDistance / 4) + 200 + 40)));
+                const finalH = Math.max(400, Math.min(1000, Math.round((totalDistance / 4) + 200 + 40)));
 
                 const gif = new GIF({ 
                     workers: 2, quality: 1, width: finalW, height: finalH, 
@@ -383,11 +385,10 @@
                 const delay = 30; 
                 const dt = delay / 1000; 
 
-                const totalDuration = 5;
+                const totalDuration = 7.5;
                 const totalFrames = Math.round((totalDuration * 1000) / delay);
                 
                 for (let i = 0; i < totalFrames; i++) {
-                    const loopSpeed = parseFloat(document.getElementById('imgSpeed').value) || 15;
                     const loopDuration = 7.5;
                     const loopDt = 30 / 1000;
                     const loopSimTime = i * loopDt;
@@ -400,17 +401,11 @@
                     let iw = ratio > 1 ? targetSize : targetSize * ratio;
                     let ih = ratio > 1 ? targetSize / ratio : targetSize;
 
-                    const horizontalLaps = 2;
-                    const verticalLaps = 3;
+                    const vX = ((finalW - iw - startX) * 4) / loopDuration;
+                    const vY = ((finalH - ih - startY) * 6) / loopDuration;
         
-                    const lapDistX = (finalW - iw - loopStartX) * 2;
-                    const lapDistY = (finalH - ih - loopStartY) * 2;
-
-                    const adjustedVX = ((finalW - iw - loopStartX) * 2) / loopDuration;
-                    const adjustedVY = ((finalH - ih - loopStartY) * 2) / loopDuration;
-        
-                    x += dx * adjustedVX * loopDt;
-                    y += dy * adjustedVY * loopDt;
+                    x += dx * vX * loopDt;
+                    y += dy * vY * loopDt;
 
                     if (x + iw >= finalW) { dx = -1; x = finalW - iw; } 
                     else if (x <= 0) { dx = 1; x = 0; }
@@ -426,11 +421,11 @@
                     }
                     
                     ctx.fillStyle = document.getElementById('gifBg').value; 
-                    ctx.fillRect(0,0,800,600);
+                    ctx.fillRect(0, 0, finalW, finalH);
 
                     ctx.save();
                     ctx.translate(x, y);
-                    ctx.drawImage(currentLogo, 0, 0, iw, ih);
+                    ctx.drawImage(currentLogo, Math.round(x), Math.round(y), iw, ih);
                     ctx.restore();
                     
                     gif.addFrame(ctx, { copy: true, delay: delay });
