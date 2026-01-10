@@ -286,7 +286,7 @@
 
             if (!pImg) {
                 const windowDiv = document.getElementById('preview-window');
-                windowDiv.innerHTML = '<img id="preview-img" style="position:absolute; max-width:200px; max-height: 200px; object-fit: contain; will-change:transform; transform-origin: top left;">';
+                windowDiv.innerHTML = '<img id="preview-img" style="position:absolute; max-width:250px; max-height: 250px; object-fit: contain; will-change:transform; transform-origin: top left;">';
                 pImg = document.getElementById('preview-img');
             }
 
@@ -306,7 +306,7 @@
             document.getElementById('lenWarning').style.display = finalUrl.length > 4000 ? 'block' : 'none';
             
             // Dynamic CSS logic
-            let css = `body { background-color: rgba(0, 0, 0, 0); margin: 0px auto; overflow: hidden; } #bouncing-image { position: absolute; will-change: transform; transform-origin: top left; max-width: 200px; max-height: 200px; object-fit: contain;}`;
+            let css = `html, body { margin: 0; padding: 0; overflow: hidden; background-color: rgba(0,0,0,0) !important; } #bouncing-image { position: absolute; will-change: transform; transform-origin: top left; max-width: 250px !important; max-height: 250px !important; object-fit: contain;}`;
             if (settings.e === 'shake') css += `\n.shake-active { animation: shake 0.1s infinite !important; }\n@keyframes shake { 0%, 100% { transform: translate(0,0); } 25% { transform: translate(4px,4px); } 50% { transform: translate(-4px,-4px); } }`;
             if (settings.e === 'invert') css += `\n.invert-active { filter: invert(1); }`;
             if (settings.e === 'zoom') css += `\n.zoom-active { transform: scale(1.4) !important; transition: transform 0.1s ease-out; }`;
@@ -577,7 +577,19 @@
 
         function downloadFile() {
             const url = document.getElementById('generated-url').innerText;
-            const html = `<!DOCTYPE html><html><body style="margin:0;overflow:hidden;"><script>window.location.replace("${url}");<\/script></body></html>`;
+            const html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        html, body { background: transparent !important; margin: 0; padding: 0; overflow: hidden; }
+                        #bouncing-image { max-width: 250px !important; max-height: 250px !important; object-fit: contain; }
+                    </style>
+                </head>
+                <body style="margin:0; overflow:hidden; background:transparent;">
+                    <script>window.location.replace("${url}");<\/script>
+                </body>
+                </html>`;
             const blob = new Blob([html], { type: 'text/html' });
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
             a.download = 'StreamImageBouncerOverlay.html'; a.click();
