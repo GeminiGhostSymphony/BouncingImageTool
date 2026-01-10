@@ -141,7 +141,9 @@
 
     <!-- ACTIVE OVERLAY ELEMENT -->
     <img id="bouncing-image" src="" alt="Bouncing Image">
-    <canvas id="live-confetti-canvas" style="position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:999; background:transparent;"></canvas>
+    <div id="live-container" style="position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:9999; display:none;">
+        <canvas id="live-canvas" style="width:100%; height:100%;"></canvas>
+    </div>
 
     <script>
         // INITIALIZATION & ROUTING
@@ -154,14 +156,12 @@
         
         let previewConfetti, liveConfetti;
         document.addEventListener('DOMContentLoaded', () => {
-            const previewCanvas = document.getElementById('preview-confetti-canvas');
-            const liveCanvas = document.getElementById('live-confetti-canvas');
+            const pCanvas = document.getElementById('preview-confetti-canvas');
+            const lCanvas = document.getElementById('live-confetti-canvas');
         
             if (previewCanvas && liveCanvas) {
-                // Initialize instances ONLY after the DOM is ready
-                // useWorker: false prevents the "Black Screen" rendering bug in many browsers
-                previewConfetti = confetti.create(previewCanvas, { resize: false, useWorker: false });
-                liveConfetti = confetti.create(liveCanvas, { resize: false, useWorker: false });
+                previewConfetti = confetti.create(pCanvas, { resize: true, useWorker: false });
+                liveConfetti = confetti.create(lCanvas, { resize: true, useWorker: false });
             }
         });
 
@@ -468,6 +468,12 @@
             const targetImg = isPreview ? document.getElementById('preview-img') : img;
             
             const container = isPreview ? document.getElementById('preview-window') : window;
+
+            const liveContainer = document.getElementById('live-container');
+            if (liveContainer) {
+                liveContainer.style.display = isPreview ? 'none' : 'block';
+            }
+            
             if (targetImg) targetImg.style.display = 'block';
 
             const imgs = imagesArr || JSON.parse(decodeURIComponent(params.get('imgs')));
@@ -555,17 +561,15 @@
             if (sel === 'confetti') {
                 const isPreview = (b.id === 'preview-window');
                 const fire = isPreview ? previewConfetti : liveConfetti;
-                const targetCanvas = isPreview ? document.getElementById('preview-confetti-canvas') : document.getElementById('live-confetti-canvas');
+                
+                if (!isPreview) document.getElementById('live-container').style.display = 'block';
         
-                if (fire && targetCanvas) {
-                    targetCanvas.width = isPreview ? b.clientWidth : window.innerWidth;
-                    targetCanvas.height = isPreview ? b.clientHeight : window.innerHeight;
-        
+                if (fire) {
                     fire({ 
                         particleCount: 150, 
                         spread: 70, 
                         origin: { y: 0.6 },
-                        zIndex: 1000 
+                        disableForced3d: true 
                     });
                 }
             } 
