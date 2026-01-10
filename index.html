@@ -352,8 +352,8 @@
                 
                 const ppf = Math.max(1, Math.round(userSpeed / 2.5)); 
 
-                const finalW = (ppf * totalFrames / 4) + targetSize + startX;
-                const finalH = (ppf * totalFrames / 6) + targetSize + startY;
+                const finalW = (ppf * totalFrames / 4) + targetSize;
+                const finalH = (ppf * totalFrames / 6) + targetSize;
 
                 const gif = new GIF({ 
                     workers: 2, quality: 1, width: finalW, height: finalH, 
@@ -391,7 +391,7 @@
                     const loopDt = 30 / 1000;
                     const loopSimTime = i * loopDt;
                     const targetSize = 200;
-                    const loopStartX = 40, loopStartY = 40;
+                    const loopStartX = 0, loopStartY = 0;
                     const swapSecs = parseFloat(document.getElementById('switchTime').value) || 0;
 
                     let currentLogo = loadedImgs[imgIdx];
@@ -399,8 +399,8 @@
                     let iw = ratio > 1 ? targetSize : targetSize * ratio;
                     let ih = ratio > 1 ? targetSize / ratio : targetSize;
 
-                    const totalDistX = (finalW - iw - loopStartX) * 4;
-                    const totalDistY = (finalH - ih - loopStartY) * 6;
+                    const totalDistX = (finalW - iw) * 4;
+                    const totalDistY = (finalH - ih) * 6;
 
                     const movedX = (totalDistX * i) / totalFrames;
                     const movedY = (totalDistY * i) / totalFrames;
