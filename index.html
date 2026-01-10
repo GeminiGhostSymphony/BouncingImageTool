@@ -162,10 +162,10 @@
             const lCanvasEl = document.getElementById('live-canvas');
             
             if (pCanvasEl && !previewConfetti) {
-                previewConfetti = confetti.create(pCanvasEl, { resize: true, useWorker: false });
+                previewConfetti = confetti.create(pCanvasEl, { resize: false, useWorker: false });
             }
             if (lCanvasEl && !liveConfetti) {
-                liveConfetti = confetti.create(lCanvasEl, { resize: true, useWorker: false });
+                liveConfetti = confetti.create(lCanvasEl, { resize: false, useWorker: false });
             }
         }
 
@@ -570,10 +570,9 @@
             if (sel === 'confetti') {
                 const isPreview = (b.id === 'preview-window');
                 const fire = isPreview ? previewConfetti : liveConfetti;
-                
-                if (!isPreview) document.getElementById('live-container').style.display = 'block';
-        
-                if (fire) {
+                const targetCanvas = isPreview ? document.getElementById('preview-canvas') : document.getElementById('live-canvas');
+                        
+                if (fire && targetCanvas) {
                     fire({ 
                         particleCount: 150, 
                         spread: 70, 
@@ -604,6 +603,8 @@
                 alert("Please add an image first to test effects.");
                 return;
             }
+
+            if (!previewConfetti) initConfetti();
         
             triggerCelebration(
                 effect, 
