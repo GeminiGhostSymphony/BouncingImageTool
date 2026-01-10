@@ -346,12 +346,14 @@
 
                 // Dynamically determine canvas size
                 const userSpeed = parseFloat(document.getElementById('imgSpeed').value) || 15;
-                const velocity = userSpeed * 8;
-                const duration = 9; 
-                const totalDistance = velocity * duration;
+                const totalFrames = 300; // 9 seconds at 30ms delay
+                const targetSize = 200;
+                const startX = 40, startY = 40;
                 
-                const finalW = Math.max(400, Math.min(1000, Math.round((totalDistance / 4) + 200 + 40)));
-                const finalH = Math.max(400, Math.min(1000, Math.round((totalDistance / 4) + 200 + 40)));
+                const ppf = Math.max(1, Math.round(userSpeed / 2.5)); 
+
+                const finalW = (ppf * totalFrames / 4) + targetSize + startX;
+                const finalH = (ppf * totalFrames / 6) + targetSize + startY;
 
                 const gif = new GIF({ 
                     workers: 2, quality: 1, width: finalW, height: finalH, 
@@ -379,21 +381,16 @@
                 let imgIdx = 0;
                 let currentLogo = loadedImgs[imgIdx];
                 let lastSwapTime = 0; // Simulated seconds
-                const startX = 40, startY = 40;
                 let x = startX, y = startY, dx = 1, dy = 1;
   
                 const delay = 30; 
                 const dt = delay / 1000; 
-
-                const totalDuration = 9;
-                const totalFrames = Math.round((totalDuration * 1000) / delay);
                 
                 for (let i = 0; i < totalFrames; i++) {
-                    const loopDuration = 9;
+                    const loopSpeed = parseFloat(document.getElementById('imgSpeed').value) || 15;
                     const loopDt = 30 / 1000;
                     const loopSimTime = i * loopDt;
                     const targetSize = 200;
-                    const loopStartX = 40, loopStartY = 40;
                     const swapSecs = parseFloat(document.getElementById('switchTime').value) || 0;
 
                     let currentLogo = loadedImgs[imgIdx];
@@ -401,8 +398,8 @@
                     let iw = ratio > 1 ? targetSize : targetSize * ratio;
                     let ih = ratio > 1 ? targetSize / ratio : targetSize;
 
-                    const vX = ((finalW - iw - startX) * 4) / loopDuration;
-                    const vY = ((finalH - ih - startY) * 6) / loopDuration;
+                    const vX = ((finalW - iw - startX) * 4) / (totalFrames * loopDt);
+                    const vY = ((finalH - ih - startY) * 6) / (totalFrames * loopDt);
         
                     x += dx * vX * loopDt;
                     y += dy * vY * loopDt;
@@ -425,7 +422,7 @@
 
                     ctx.save();
                     //ctx.translate(x, y);
-                    ctx.drawImage(currentLogo, Math.round(x), Math.round(y), iw, ih);
+                    ctx.drawImage(currentLogo, Math.floor(x), Math.floor(y), iw, ih);
                     ctx.restore();
                     
                     gif.addFrame(ctx, { copy: true, delay: delay });
