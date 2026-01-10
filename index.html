@@ -393,7 +393,6 @@
                     const loopDt = 30 / 1000;
                     const loopSimTime = i * loopDt;
                     const targetSize = 200;
-                    const loopStartX = 40, loopStartY = 40;
                     const swapSecs = parseFloat(document.getElementById('switchTime').value) || 0;
 
                     let currentLogo = loadedImgs[imgIdx];
@@ -401,8 +400,11 @@
                     let iw = ratio > 1 ? targetSize : targetSize * ratio;
                     let ih = ratio > 1 ? targetSize / ratio : targetSize;
 
-                    const vX = ((finalW - iw - startX) * 4) / loopDuration;
-                    const vY = ((finalH - ih - startY) * 6) / loopDuration;
+                    const travelX = (finalW - iw - startX) * 4; // 4 lengths = 2 laps
+                    const travelY = (finalH - ih - startY) * 6; // 6 lengths = 3 laps
+                    
+                    const vX = travelX / loopDuration;
+                    const vY = travelY / loopDuration;
         
                     x += dx * vX * loopDt;
                     y += dy * vY * loopDt;
