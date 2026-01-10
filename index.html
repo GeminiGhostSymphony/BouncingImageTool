@@ -391,6 +391,7 @@
                     const loopDt = 30 / 1000;
                     const loopSimTime = i * loopDt;
                     const targetSize = 200;
+                    const loopStartX = 40, loopStartY = 40;
                     const swapSecs = parseFloat(document.getElementById('switchTime').value) || 0;
 
                     let currentLogo = loadedImgs[imgIdx];
@@ -398,16 +399,29 @@
                     let iw = ratio > 1 ? targetSize : targetSize * ratio;
                     let ih = ratio > 1 ? targetSize / ratio : targetSize;
 
-                    const vX = ((finalW - iw - startX) * 4) / (totalFrames * loopDt);
-                    const vY = ((finalH - ih - startY) * 6) / (totalFrames * loopDt);
-        
-                    x += dx * vX * loopDt;
-                    y += dy * vY * loopDt;
+                    const totalDistX = (finalW - iw - loopStartX) * 4;
+                    const totalDistY = (finalH - ih - loopStartY) * 6;
 
-                    if (x + iw >= finalW) { dx = -1; x = finalW - iw; } 
-                    else if (x <= 0) { dx = 1; x = 0; }
-                    if (y + ih >= finalH) { dy = -1; y = finalH - ih; } 
-                    else if (y <= 0) { dy = 1; y = 0; }
+                    const movedX = (totalDistX * i) / totalFrames;
+                    const movedY = (totalDistY * i) / totalFrames;
+
+                    const lapSizeX = (finalW - iw - loopStartX) * 2;
+                    const lapSizeY = (finalH - ih - loopStartY) * 2;
+                    
+                    const relX = movedX % lapSizeX;
+                    const relY = movedY % lapSizeY;
+        
+                    const currentX = relX < (lapSizeX / 2) ? relX : lapSizeX - relX;
+                    const currentY = relY < (lapSizeY / 2) ? relY : lapSizeY - relY;
+
+                    dx = relX < (lapSizeX / 2) ? 1 : -1;
+                    dy = relY < (lapSizeY / 2) ? 1 : -1;
+
+                    x = loopStartX + currentX;
+                    y = loopStartY + currentY;
+
+                    const hitX = (currentX <= 0.1 || x + iw >= finalW - 0.1);
+                    const hitY = (currentY <= 0.1 || y + ih >= finalH - 0.1);
         
                     // Swap Logic
                     const shouldSwap = (swapSecs === 0 && (x <= 0 || x + iw >= finalW || y <= 0 || y + ih >= finalH)) || 
@@ -422,7 +436,7 @@
 
                     ctx.save();
                     //ctx.translate(x, y);
-                    ctx.drawImage(currentLogo, Math.floor(x), Math.floor(y), iw, ih);
+                    ctx.drawImage(currentLogo, Math.trunc(x), Math.trunc(y), iw, ih);
                     ctx.restore();
                     
                     gif.addFrame(ctx, { copy: true, delay: delay });
