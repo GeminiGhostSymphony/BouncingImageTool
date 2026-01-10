@@ -100,7 +100,7 @@
                     <option value="zoom">Zoom-in</option>
                     <option value="random">Random Selection of Above</option>
                 </select>
-                <button onclick="testCelebrationUI()" style="background: #444; color: #fff; font-size: 11px; padding: 8px; margin-bottom: 15px;">Test Selected Effect</button>
+                <button onclick="testCelebrationUI()">Test Selected Effect</button>
                 <div style="display:flex; gap:10px;">
                     <div style="flex:1;"><label>Speed</label><input type="number" id="imgSpeed" value="15" step="1" min="0" oninput="if(this.value<0)this.value=0"></div>
                 </div>
@@ -141,7 +141,7 @@
 
     <!-- ACTIVE OVERLAY ELEMENT -->
     <img id="bouncing-image" src="" alt="Bouncing Image">
-    <canvas id="live-confetti-canvas" style="position:absolute; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:999;"></canvas>
+    <canvas id="live-confetti-canvas" style="position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:999;"></canvas>
 
     <script>
         // INITIALIZATION & ROUTING
@@ -154,8 +154,8 @@
         
         const previewConfettiCanvas = document.getElementById('preview-confetti-canvas');
         const liveConfettiCanvas = document.getElementById('live-confetti-canvas');
-        const previewConfetti = confetti.create(previewConfettiCanvas, { resize: true, useWorker: true });
-        const liveConfetti = confetti.create(liveConfettiCanvas, { resize: true, useWorker: true });
+        const previewConfetti = confetti.create(previewCanvas, { resize: false, useWorker: false });
+        const liveConfetti = confetti.create(liveCanvas, { resize: false, useWorker: false });
 
         if (params.has('imgs')) { 
             startLiveMode(false); 
@@ -545,13 +545,18 @@
             const sel = t === 'random' ? effects[Math.floor(Math.random() * effects.length)] : t;
             
             if (sel === 'confetti') {
-                const fire = (b.id === 'preview-window') ? previewConfetti : liveConfetti;
-                
+                const isPreview = (b.id === 'preview-window');
+                const fire = isPreview ? previewConfetti : liveConfetti;
+                const targetCanvas = isPreview ? previewCanvas : liveCanvas;
+        
+                targetCanvas.width = b.clientWidth || b.innerWidth || window.innerWidth;
+                targetCanvas.height = b.clientHeight || b.innerHeight || window.innerHeight;
+        
                 fire({ 
-                    particleCount: 200, 
-                    spread: 90, 
-                    origin: { y: 0.7 },
-                    zIndex: 1000 // Ensure it stays above the bouncing image
+                    particleCount: 150, 
+                    spread: 70, 
+                    origin: { y: 0.6 },
+                    zIndex: 1000 
                 });
             } 
             else if (sel === 'flash') { b.style.backgroundColor = 'white'; setTimeout(() => b.style.backgroundColor = 'transparent', 150); }
