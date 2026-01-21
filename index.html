@@ -314,7 +314,6 @@
             document.getElementById('effectType').value = 'none';
             document.getElementById('gifBg').value = '#000000';
             document.getElementById('gifBgHex').value = '#000000';
-            document.getElementById('gifTransparent').checked = false;
             clearLocalAssets(); 
         }
 
@@ -419,12 +418,27 @@
                 const targetSize = 200;
                 
                 // Calculate pixels per frame based on speed (approximate conversion)
-                const ppf = Math.max(1, userSpeed * 0.2); // Adjusted to match live preview speed
+                const ppf = Math.max(1, userSpeed * 0.2); 
 
                 const finalW = Math.min (1100, (ppf * totalFrames / 4) + targetSize);
                 const finalH = Math.min (1100, (ppf * totalFrames / 6) + targetSize);
 
-                // Load images ONCE to avoid double-downloading and race conditions
+                const gif = new GIF({ 
+                    workers: 2, quality: 1, width: finalW, height: finalH, 
+                    workerScript: workerUrl, dither: false
+                });
+
+                gif.on('progress', p => {
+                    btn.innerText = `Encoding ${Math.round(p * 100)}%`;
+                });
+
+                const tempCanvas = document.createElement('canvas');
+                const ctx = tempCanvas.getContext('2d');
+                tempCanvas.width = finalW; tempCanvas.height = finalH;
+
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+
                 const loadImages = currentImages.map(url => {
                     return new Promise((resolve) => {
                         const img = new Image();
@@ -438,36 +452,16 @@
                 const loadedImgs = (await Promise.all(loadImages)).filter(i => i);
                 if (!loadedImgs.length) throw new Error("No valid images loaded");
 
-                const gif = new GIF({ 
-                    workers: 2, quality: 1, width: finalW, height: finalH, 
-                    workerScript: workerUrl, dither: false, 
-                });
-
-                // Add progress feedback so user knows it hasn't crashed
-                gif.on('progress', p => {
-                    btn.innerText = `Encoding ${Math.round(p * 100)}%`;
-                });
-
-                const tempCanvas = document.createElement('canvas');
-                const ctx = tempCanvas.getContext('2d');
-                tempCanvas.width = finalW; tempCanvas.height = finalH;
-
-                // Disable smoothing for transparent exports to prevent "Magenta Halos" on edges
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
-
                 let imgIdx = 0;
                 let lastSwapTime = 0; // Simulated seconds
   
                 const delay = 30; 
                 const loopDt = delay / 1000; 
-                let lastSegX = 0, lastSegY = 0;
+                let lastLapX = 0, lastLapY = 0;
                 
                 for (let i = 0; i < totalFrames; i++) {
                     const loopBg = document.getElementById('gifBg').value;
                     const loopSimTime = i * loopDt;
-                    const targetSize = 200;
-                    const loopStartX = 0, loopStartY = 0;
                     const swapSecs = parseFloat(document.getElementById('switchTime').value) || 0;
 
                     let currentLogo = loadedImgs[imgIdx];
@@ -479,39 +473,49 @@
                         iw = 200 * ratio;
                     }
 
-                    const totalDistX = (finalW - iw) * 4;
-                    const totalDistY = (finalH - ih) * 6;
+                    const boxSize = targetSize;
+                    
+                    const totalDistX = (finalW - boxSize) * 4;
+                    const totalDistY = (finalH - boxSize) * 6;
         
                     const movedX = (totalDistX * i) / totalFrames;
                     const movedY = (totalDistY * i) / totalFrames;
         
-                    const lapSizeX = (finalW - iw) * 2;
-                    const lapSizeY = (finalH - ih) * 2;
+                    const maxX = finalW - boxSize;
+                    const maxY = finalH - boxSize;
+
+                    const lapX = Math.floor(movedX / (maxX || 1));
+                    const lapY = Math.floor(movedY / (maxY || 1));
                     
-                    const relX = movedX % lapSizeX;
-                    const relY = movedY % lapSizeY;
-                    
-                    const x = relX < (lapSizeX / 2) ? relX : lapSizeX - relX;
-                    const y = relY < (lapSizeY / 2) ? relY : lapSizeY - relY;
-        
-                    const currentX = relX < (lapSizeX / 2) ? relX : lapSizeX - relX;
-                    const currentY = relY < (lapSizeY / 2) ? relY : lapSizeY - relY;
+                    const getBouncePos = (val, max) => {
+                        const cycle = val % (max * 2);
+                        return cycle < max ? cycle : (max * 2) - cycle;
+                    };
+
+                    const x = getBouncePos(movedX, maxX);
+                    const y = getBouncePos(movedY, maxY);
+
+                    const drawX = x + (boxSize - iw) / 2;
+                    const drawY = y + (boxSize - ih) / 2;
+                    // --------------------------------------------------
 
                     ctx.fillStyle = loopBg;
                     ctx.fillRect(0, 0, finalW, finalH);
 
                     ctx.save();
-                    ctx.drawImage(currentLogo, Math.trunc(x), Math.trunc(y), iw, ih);
+                    ctx.drawImage(currentLogo, drawX, drawY, iw, ih);
                     ctx.restore();
                     
                     gif.addFrame(ctx, { copy: true, delay: delay });
 
-                    const hitX = (x <= 0.5 || x + iw >= finalW - 0.5);
-                    const hitY = (y <= 0.5 || y + ih >= finalH - 0.5);
-
                     // Swap Logic
-                    const shouldSwap = (swapSecs === 0 && (x <= 0 || x + iw >= finalW || y <= 0 || y + ih >= finalH)) || 
+                    let bounced = false;
+                    if (lapX !== lastLapX) { bounced = true; lastLapX = lapX; }
+                    if (lapY !== lastLapY) { bounced = true; lastLapY = lapY; }
+                    
+                    const shouldSwap = (swapSecs === 0 && bounced) || 
                                        (swapSecs > 0 && (loopSimTime - lastSwapTime) >= swapSecs);
+                                       
                     if (shouldSwap && loadedImgs.length > 1) {
                         imgIdx = (imgIdx + 1) % loadedImgs.length;
                         lastSwapTime = loopSimTime;
@@ -528,7 +532,6 @@
                 gif.render();
             } catch (err) { alert("GIF Error: " + err); btn.innerText = "Download GIF"; btn.disabled = false; }
         }
-
 
         // Global resize handler reference to prevent memory leaks
         let currentResizeHandler = null;
@@ -565,7 +568,10 @@
                 console.error("Error parsing images:", e);
                 return;
             }
-            if (!Array.isArray(imgs)) imgs = [];
+            if (!Array.isArray(imgs) || imgs.length === 0) {
+                console.error("No valid images found for overlay.");
+                return;
+            }
 
             const effect = settings?.e || params.get('e');
             const swap = parseInt(settings?.t || params.get('t')) || 0;
@@ -592,6 +598,7 @@
 
             // Cache speed input element to avoid DOM search in loop
             const speedInput = isPreview ? document.getElementById('imgSpeed') : null;
+            const switchTimeInput = isPreview ? document.getElementById('switchTime') : null;
 
             function animate(now) {
                 if (!lastFrameTime) {
@@ -655,7 +662,7 @@
                 
         
                 const activeImgs = isPreview ? currentImages : imgs;
-                const swapSecs = isPreview ? (parseFloat(document.getElementById('switchTime').value) || 0) : (parseFloat(params.get('t')) || 0);
+                const swapSecs = isPreview ? (parseFloat(switchTimeInput.value) || 0) : (parseFloat(params.get('t')) || 0);
                 const timePassed = (Date.now() - lastSw) / 1000;
         
                 if ((swapSecs === 0 && (hX || hY)) || (swapSecs > 0 && timePassed >= swapSecs)) {
@@ -668,7 +675,7 @@
                     }
                 }
                 
-                // Safety Net: Only reset if COMPLETELY off screen
+                // Safety Net: Only reset if completely off screen
                 if (x > w) x = w - iw;
                 if (x + iw < 0) x = 0;
                 if (y > h) y = h - ih;
