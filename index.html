@@ -124,7 +124,6 @@
                 <label>Background Color</label>
                 <input type="color" id="gifBg" value="#000000" style="cursor: pointer;">
                 <input type="text" id="gifBgHex" value="#000000" placeholder="#000000" maxlength="7" style="font-family: monospace;">
-                <div style="margin-top: 10px;"><label style="display:inline; text-transform:none;"><input type="checkbox" id="gifTransparent" style="width:auto; margin-right:8px;">Transparent Background</label></div>
                 <small style="color: var(--muted); display: block; margin-top: -5px; margin-bottom: 15px;">Note: maximum GIF image height and width are 1100px. Setting the speed too high (above 30) may fail to export a GIF. Please be patient.</small>
                 <button onclick="exportToGif()" id="gifBtn">Download GIF</button>
             </div>
@@ -405,7 +404,6 @@
             btn.innerText = "Preparing..."; btn.disabled = true;
 
             const bgColor = document.getElementById('gifBg').value;
-            const isTransparent = document.getElementById('gifTransparent').checked;
 
             try {
                 // Fetch worker code and create a local Blob
@@ -426,7 +424,7 @@
                 const finalW = Math.min (1100, (ppf * totalFrames / 4) + targetSize);
                 const finalH = Math.min (1100, (ppf * totalFrames / 6) + targetSize);
 
-                // Load images once to avoid double-downloading and race conditions
+                // Load images ONCE to avoid double-downloading and race conditions
                 const loadImages = currentImages.map(url => {
                     return new Promise((resolve) => {
                         const img = new Image();
@@ -439,9 +437,6 @@
 
                 const loadedImgs = (await Promise.all(loadImages)).filter(i => i);
                 if (!loadedImgs.length) throw new Error("No valid images loaded");
-
-                // Determine a safe transparency key using the already loaded images
-                const safeKey = isTransparent ? getSafeTransparentColor(loadedImgs) : { hex: null, str: null };
 
                 const gif = new GIF({ 
                     workers: 2, quality: 1, width: finalW, height: finalH, 
@@ -458,8 +453,8 @@
                 const ctx = tempCanvas.getContext('2d');
                 tempCanvas.width = finalW; tempCanvas.height = finalH;
 
-                // Disable smoothing for transparent exports to prevent halos on edges
-                ctx.imageSmoothingEnabled = !isTransparent;
+                // Disable smoothing for transparent exports to prevent "Magenta Halos" on edges
+                ctx.imageSmoothingEnabled = true;
                 ctx.imageSmoothingQuality = 'high';
 
                 let imgIdx = 0;
@@ -474,6 +469,7 @@
                     const loopSimTime = i * loopDt;
                     const swapSecs = parseFloat(document.getElementById('switchTime').value) || 0;
 
+                    // --- 1. Update Physics (Step-based to fix teleporting glitch) ---
                     let currentLogo = loadedImgs[imgIdx];
                     const ratio = currentLogo.naturalWidth / currentLogo.naturalHeight;
                     let iw = ratio > 1 ? targetSize : targetSize * ratio;
@@ -483,7 +479,8 @@
                         iw = 200 * ratio;
                     }
 
-                    // Formula-Based Physics 
+                    // --- 1. Formula-Based Physics (Guarantees Loop) ---
+                    // We simulate a fixed "Virtual Box" of targetSize (200px) to prevent teleporting
                     const boxSize = targetSize;
                     
                     // Calculate total distance for exactly 2 laps (horizontal) and 3 laps (vertical)
@@ -494,13 +491,14 @@
                     const movedX = (totalDistX * i) / totalFrames;
                     const movedY = (totalDistY * i) / totalFrames;
 
-                    // Calculate segments for swap detection
+                    // Calculate segments (0=first leg, 1=return leg, etc) for swap detection
                     const maxX = finalW - boxSize;
                     const maxY = finalH - boxSize;
                     const segX = Math.floor(movedX / (maxX || 1));
                     const segY = Math.floor(movedY / (maxY || 1));
         
-                    // Convert linear progress to bounce 
+                    // Convert linear progress to bounce (Triangle Wave)
+                    // Helper: 0 -> max -> 0
                     const getBouncePos = (val, max) => {
                         const cycle = val % (max * 2);
                         return cycle < max ? cycle : (max * 2) - cycle;
@@ -510,8 +508,10 @@
                     const y = getBouncePos(movedY, maxY);
 
                     // Center the actual image inside the Virtual Box
+                    // This ensures the path remains smooth even if image size changes
                     const drawX = x + (boxSize - iw) / 2;
                     const drawY = y + (boxSize - ih) / 2;
+                    // --------------------------------------------------
 
                     if (isTransparent) {
                         ctx.fillStyle = safeKey.str; // Use calculated safe key
@@ -523,7 +523,7 @@
 
                     ctx.save();
                     if (isTransparent) {
-                        // Snap to integer pixels to prevent anti-aliasing artifacts on transparent backgrounds
+                        // Snap to integer pixels to prevent anti-aliasing artifacts (halos) on transparent backgrounds
                         ctx.drawImage(currentLogo, Math.round(drawX), Math.round(drawY), iw, ih);
                     } else {
                         // Use sub-pixel rendering for smoother motion on solid backgrounds
@@ -558,47 +558,6 @@
             } catch (err) { alert("GIF Error: " + err); btn.innerText = "Download GIF"; btn.disabled = false; }
         }
 
-        // Helper to find a color not present in the images to use as a transparency key
-        function getSafeTransparentColor(loadedImages) {
-            const usedColors = new Set();
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-            // Scan all images and record every color used
-            for (const img of loadedImages) {
-                canvas.width = img.naturalWidth;
-                canvas.height = img.naturalHeight;
-                ctx.drawImage(img, 0, 0);
-                
-                try {
-                    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-                    for (let i = 0; i < data.length; i += 4) {
-                        if (data[i+3] === 0) continue; // Skip fully transparent pixels
-                        const colorVal = (data[i] << 16) | (data[i+1] << 8) | data[i+2];
-                        usedColors.add(colorVal);
-                    }
-                } catch (e) {
-                    console.warn("Could not read image data (likely CORS). Skipping color safety check for image.");
-                }
-            }
-
-            // Check preferred green screen colors first
-            const candidates = [0xFF00FF, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FFFF, 0xFFFF00];
-            for (const c of candidates) {
-                if (!usedColors.has(c)) {
-                    return { hex: c, str: '#' + c.toString(16).padStart(6, '0').toUpperCase() };
-                }
-            }
-
-            // Fail-safe: Find the first unused color in the RGB spectrum
-            for (let i = 0; i <= 0xFFFFFF; i++) {
-                if (!usedColors.has(i)) {
-                    return { hex: i, str: '#' + i.toString(16).padStart(6, '0').toUpperCase() };
-                }
-            }
-
-            return { hex: 0xFF00FF, str: '#FF00FF' }; // Should never happen
-        }
 
         // Global resize handler reference to prevent memory leaks
         let currentResizeHandler = null;
@@ -707,7 +666,7 @@
                     if (x >= xLimit && dx > 0) { dx = -dx; hX = true; }
                     else if (x <= 0 && dx < 0) { dx = -dx; hX = true; }
                 } else {
-                    // If image is wider than screen, bounce when the ends hit the screen edges (panning)
+                    // If image is wider than screen, bounce when the *ends* hit the screen edges (panning)
                     if (x >= 0 && dx > 0) { dx = -dx; hX = true; }
                     else if (x <= xLimit && dx < 0) { dx = -dx; hX = true; }
                 }
@@ -738,7 +697,7 @@
                     }
                 }
                 
-                // Safety Net: Only reset if COMPLETELY off screen (handles resize)
+                // Safety Net: Only reset if COMPLETELY off screen
                 if (x > w) x = w - iw;
                 if (x + iw < 0) x = 0;
                 if (y > h) y = h - ih;
@@ -843,5 +802,6 @@
         }
         
     </script>
+
 </body>
 </html>
