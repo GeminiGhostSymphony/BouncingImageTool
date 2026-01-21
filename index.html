@@ -161,47 +161,49 @@
         let lastFrameTime = performance.now();
         let animationId = null; // Track animation to prevent duplicates
 
-        if (params.has('imgs')) { 
-            if (params.has('m')) {
-                const maxSize = params.get('m') + 'px';
-                img.style.maxWidth = maxSize;
-                img.style.maxHeight = maxSize;
-                img.style.objectFit = 'contain';
-            }
-            // Ensure background is transparent in overlay mode
-            if (document.body) {
-                document.body.style.backgroundColor = 'transparent';
-            }
-            if (document.documentElement) {
-                document.documentElement.style.backgroundColor = 'transparent';
-            }
-            startLiveMode(false); 
-        } else { 
-            document.getElementById('setup-ui').style.display = 'block'; 
-            // Automatically update listeners with Debounce
-            ['urlInput', 'imgSpeed', 'switchTime', 'effectType'].forEach(id => {
-                document.getElementById(id).addEventListener('input', debounce(generateContent, 500));
-            });
+        document.addEventListener('DOMContentLoaded', () => {
+            if (params.has('imgs')) { 
+                if (params.has('m')) {
+                    const maxSize = params.get('m') + 'px';
+                    img.style.maxWidth = maxSize;
+                    img.style.maxHeight = maxSize;
+                    img.style.objectFit = 'contain';
+                }
+                // Ensure background is transparent in overlay mode
+                if (document.body) {
+                    document.body.style.backgroundColor = 'transparent';
+                }
+                if (document.documentElement) {
+                    document.documentElement.style.backgroundColor = 'transparent';
+                }
+                startLiveMode(false); 
+            } else { 
+                document.getElementById('setup-ui').style.display = 'block'; 
+                // Automatically update listeners with Debounce
+                ['urlInput', 'imgSpeed', 'switchTime', 'effectType'].forEach(id => {
+                    document.getElementById(id).addEventListener('input', debounce(generateContent, 500));
+                });
 
-            const colorPicker = document.getElementById('gifBg');
-            const hexInput = document.getElementById('gifBgHex');
-        
-            if (colorPicker && hexInput) {
-                colorPicker.addEventListener('input', () => {
-                    hexInput.value = colorPicker.value.toUpperCase();
-                });
-        
-                hexInput.addEventListener('input', () => {
-                    let val = hexInput.value;
-                    if (!val.startsWith('#')) val = '#' + val;
-                    if (/^#[0-9A-F]{6}$/i.test(val)) {
-                        colorPicker.value = val;
-                    }
-                });
-            }
+                const colorPicker = document.getElementById('gifBg');
+                const hexInput = document.getElementById('gifBgHex');
             
-            initFileInput(document.querySelector('.file-input-row'));
-        }
+                if (colorPicker && hexInput) {
+                    colorPicker.addEventListener('input', () => {
+                        hexInput.value = colorPicker.value.toUpperCase();
+                    });
+            
+                    hexInput.addEventListener('input', () => {
+                        let val = hexInput.value;
+                        if (!val.startsWith('#')) val = '#' + val;
+                        if (/^#[0-9A-F]{6}$/i.test(val)) {
+                            colorPicker.value = val;
+                        }
+                    });
+                }
+                
+                initFileInput(document.querySelector('.file-input-row'));
+            }
+        });
 
         function debounce(func, wait) {
             let timeout;
@@ -568,11 +570,17 @@
                 const pImgs = params.get('imgs');
                 imgs = imagesArr || (pImgs ? JSON.parse(decodeURIComponent(pImgs)) : []);
             } catch (e) {
-                console.error("Error parsing images:", e);
+                console.error("Failed to parse 'imgs' URL parameter:", e);
+                if (!isPreview) {
+                    document.body.innerHTML = `<div style="color:red; font-family:sans-serif; padding:20px;">Error: Could not load images from URL. The URL might be incomplete or malformed.</div>`;
+                }
                 return;
             }
             if (!Array.isArray(imgs) || imgs.length === 0) {
-                console.error("No valid images found for overlay.");
+                console.error("No valid images found in URL parameter.");
+                if (!isPreview) {
+                    document.body.innerHTML = `<div style="color:red; font-family:sans-serif; padding:20px;">Error: No images found in the URL.</div>`;
+                }
                 return;
             }
 
