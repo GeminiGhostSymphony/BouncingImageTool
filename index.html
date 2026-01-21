@@ -169,8 +169,12 @@
                 img.style.objectFit = 'contain';
             }
             // Ensure background is transparent in overlay mode
-            document.body.style.backgroundColor = 'transparent';
-            document.documentElement.style.backgroundColor = 'transparent';
+            if (document.body) {
+                document.body.style.backgroundColor = 'transparent';
+            }
+            if (document.documentElement) {
+                document.documentElement.style.backgroundColor = 'transparent';
+            }
             startLiveMode(false); 
         } else { 
             document.getElementById('setup-ui').style.display = 'block'; 
@@ -473,6 +477,7 @@
                         iw = 200 * ratio;
                     }
 
+                    // --- Formula-Based Physics (Guarantees Loop) ---
                     const boxSize = targetSize;
                     
                     const totalDistX = (finalW - boxSize) * 4;
@@ -675,7 +680,7 @@
                     }
                 }
                 
-                // Safety Net: Only reset if completely off screen
+                // Safety Net: Only reset if COMPLETELY off screen
                 if (x > w) x = w - iw;
                 if (x + iw < 0) x = 0;
                 if (y > h) y = h - ih;
@@ -700,10 +705,11 @@
             };
 
             // Update cached window dimensions on resize
-            window.addEventListener('resize', () => {
+            currentResizeHandler = () => {
                 w = isPreview ? container.clientWidth : window.innerWidth;
                 h = isPreview ? container.clientHeight : window.innerHeight;
-            });
+            };
+            window.addEventListener('resize', currentResizeHandler);
         
             // Set the onload listener before setting .src to ensure it catches the event
             if (targetImg.complete && targetImg.naturalWidth > 0) {
