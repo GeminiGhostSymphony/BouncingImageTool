@@ -19,7 +19,7 @@
         /* BASE LAYOUT */
         html, body { 
             height: 100%; width: 100%; margin: 0; padding: 0;
-            background-color: var(--bg); overflow-y: auto; 
+            background-color: #000000; overflow-y: auto; 
             font-family: 'Inter', system-ui, sans-serif; color: var(--text); 
         }
 
@@ -115,7 +115,7 @@
                 <div style="display:flex; gap:10px;">
                     <div style="flex:1;"><label>Swap Image Time (Seconds, 0 = Every Hit)</label><input type="number" id="switchTime" value="0" step="0.5" min="0" oninput="if(this.value<0)this.value=0"></div>
                 </div>
-                <button class="reset-btn" onclick="resetSettings()" style="margin-top: 10px;">Reset All Settings</button>
+                <button class="reset-btn" onclick="resetSettings()" style="margin-top: 10px;">Reset Effects & Speed Settings</button>
             </div>
 
             <!-- GIF EXPORT -->
@@ -169,13 +169,7 @@
                     img.style.maxHeight = maxSize;
                     img.style.objectFit = 'contain';
                 }
-                // Ensure background is transparent in overlay mode
-                if (document.body) {
-                    document.body.style.backgroundColor = 'transparent';
-                }
-                if (document.documentElement) {
-                    document.documentElement.style.backgroundColor = 'transparent';
-                }
+                
                 startLiveMode(false); 
             } else { 
                 document.getElementById('setup-ui').style.display = 'block'; 
@@ -314,13 +308,11 @@
         }
 
         function resetSettings() {
-            document.getElementById('urlInput').value = '';
             document.getElementById('imgSpeed').value = '15';
             document.getElementById('switchTime').value = '0';
             document.getElementById('effectType').value = 'none';
-            document.getElementById('gifBg').value = '#000000';
-            document.getElementById('gifBgHex').value = '#000000';
-            clearLocalAssets(); 
+            // Trigger a content refresh to apply the reset values to the preview
+            generateContent();
         }
 
         // GENERATOR LOGIC
