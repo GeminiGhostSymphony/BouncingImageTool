@@ -477,7 +477,6 @@
                         iw = 200 * ratio;
                     }
 
-                    // --- Formula-Based Physics (Guarantees Loop) ---
                     const boxSize = targetSize;
                     
                     const totalDistX = (finalW - boxSize) * 4;
@@ -502,7 +501,6 @@
 
                     const drawX = x + (boxSize - iw) / 2;
                     const drawY = y + (boxSize - ih) / 2;
-                    // --------------------------------------------------
 
                     ctx.fillStyle = loopBg;
                     ctx.fillRect(0, 0, finalW, finalH);
@@ -680,7 +678,7 @@
                     }
                 }
                 
-                // Safety Net: Only reset if COMPLETELY off screen
+                // Safety Net: Only reset if completely off screen
                 if (x > w) x = w - iw;
                 if (x + iw < 0) x = 0;
                 if (y > h) y = h - ih;
