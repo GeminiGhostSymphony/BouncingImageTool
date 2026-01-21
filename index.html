@@ -46,6 +46,8 @@
         button.follow-btn:hover { background: #fff; color: #9146FF; }
         button.clear-btn { background: var(--err) !important; color: #fff; }
         button.clear-btn:hover { background: #fff !important; color: var(--err) !important; }
+        button.reset-btn { background: #444; color: #fff; }
+        button.reset-btn:hover { background: #666; }
         .upload-row { display: flex; align-items: center; justify-content: space-between; background: #252525; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #444; font-size: 0.85em; }
         button.del-btn { width: auto !important; padding: 4px 10px !important; margin: 0 !important; background: var(--err) !important; color: white !important; font-size: 11px !important; }
 
@@ -113,6 +115,7 @@
                 <div style="display:flex; gap:10px;">
                     <div style="flex:1;"><label>Swap Image Time (Seconds, 0 = Every Hit)</label><input type="number" id="switchTime" value="0" step="0.5" min="0" oninput="if(this.value<0)this.value=0"></div>
                 </div>
+                <button class="reset-btn" onclick="resetSettings()" style="margin-top: 10px;">Reset All Settings</button>
             </div>
 
             <!-- GIF EXPORT -->
@@ -121,6 +124,7 @@
                 <label>Background Color</label>
                 <input type="color" id="gifBg" value="#000000" style="cursor: pointer;">
                 <input type="text" id="gifBgHex" value="#000000" placeholder="#000000" maxlength="7" style="font-family: monospace;">
+                <div style="margin-top: 10px;"><label style="display:inline; text-transform:none;"><input type="checkbox" id="gifTransparent" style="width:auto; margin-right:8px;">Transparent Background</label></div>
                 <small style="color: var(--muted); display: block; margin-top: -5px; margin-bottom: 15px;">Note: maximum GIF image height and width are 1100px. Setting the speed too high (above 30) may fail to export a GIF. Please be patient.</small>
                 <button onclick="exportToGif()" id="gifBtn">Download GIF</button>
             </div>
@@ -132,7 +136,7 @@
                 <button onclick="generateContent()" style="margin-top:20px;">Generate/Update Stream Overlay Package</button>
                 <small style="color: var(--muted); display: block; margin-top: -5px; margin-bottom: 15px;">Click the above button to ensure the generated HTML code, URL, and CSS are up to date.</small>
                 <div id="results-area" style="display:none; margin-top: 25px;">
-                    <div id="lenWarning" class="url-warning">⚠️ URL too long! Use Web URLs instead of file uploads or use "Download Launcher" button below.</div>
+                    <div id="lenWarning" class="url-warning" style="display:none;">⚠️ URL too long! Use Web URLs instead of file uploads or use "Download Launcher" button below.</div>
                     <label>Browser Source URL (Length: <span id="urlCount">0</span>)</label>
                     <div id="generated-url" class="output-box" onclick="copyText(this)"></div>
                     <small style="color: var(--muted); display: block; margin-top: -5px; margin-bottom: 15px;">(Click box above to copy URL to clipboard)</small>
@@ -140,7 +144,7 @@
                     <div id="generated-css" class="output-box" onclick="copyText(this)"></div>
                     <small style="color: var(--muted); display: block; margin-top: -5px; margin-bottom: 15px;">(Click box above to copy URL to clipboard)</small>
                     <label>For overlays, download the HTML file below and import into streaming software as a browser source with the above CSS.</label>
-                    <button class="download-btn" onclick="downloadFile()">Download Launcher HTML</button>
+                    <button id="dlBtn" class="download-btn" onclick="downloadFile()">Download Launcher HTML</button>
                 </div>
             </div>
         </div>
@@ -165,12 +169,15 @@
                 img.style.maxHeight = maxSize;
                 img.style.objectFit = 'contain';
             }
+            // Ensure background is transparent in overlay mode
+            document.body.style.backgroundColor = 'transparent';
+            document.documentElement.style.backgroundColor = 'transparent';
             startLiveMode(false); 
         } else { 
             document.getElementById('setup-ui').style.display = 'block'; 
-            // Automatically update listeners
+            // Automatically update listeners with Debounce
             ['urlInput', 'imgSpeed', 'switchTime', 'effectType'].forEach(id => {
-                document.getElementById(id).addEventListener('input', generateContent);
+                document.getElementById(id).addEventListener('input', debounce(generateContent, 500));
             });
 
             const colorPicker = document.getElementById('gifBg');
@@ -191,10 +198,14 @@
             }
             
             initFileInput(document.querySelector('.file-input-row'));
-            document.getElementById('urlInput').addEventListener('input', generateContent);
-            document.getElementById('imgSpeed').addEventListener('input', generateContent);
-            document.getElementById('switchTime').addEventListener('input', generateContent);
-            document.getElementById('effectType').addEventListener('input', generateContent);
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
         }
 
         function initFileInput(el) {
@@ -297,11 +308,23 @@
             syncAndRefresh();
         }
 
+        function resetSettings() {
+            document.getElementById('urlInput').value = '';
+            document.getElementById('imgSpeed').value = '15';
+            document.getElementById('switchTime').value = '0';
+            document.getElementById('effectType').value = 'none';
+            document.getElementById('gifBg').value = '#000000';
+            document.getElementById('gifBgHex').value = '#000000';
+            document.getElementById('gifTransparent').checked = false;
+            clearLocalAssets(); 
+        }
+
         // GENERATOR LOGIC
         async function generateContent() {
             const urlInput = document.getElementById('urlInput');
             const webUrls = urlInput ? urlInput.value.split('\n').map(u => u.trim()).filter(u => u !== "") : [];
             const pMsg = document.getElementById('preview-msg');
+            const dlBtn = document.getElementById('dlBtn');
             let pImg = document.getElementById('preview-img');
 
             currentImages = [...localAssets, ...webUrls];
@@ -345,9 +368,20 @@
             };
 
             const finalUrl = `${window.location.origin}${window.location.pathname}?imgs=${settings.imgs}&v=${settings.v}&e=${settings.e}&t=${settings.t}&m=${settings.m}`;
-            document.getElementById('generated-url').innerText = finalUrl;
-            document.getElementById('urlCount').innerText = finalUrl.length;
-            document.getElementById('lenWarning').style.display = finalUrl.length > 4000 ? 'block' : 'none';
+            
+            const urlBox = document.getElementById('generated-url');
+            
+            if (localAssets.length > 0) {
+                urlBox.innerText = "⚠️ Cannot generate URL: Local files detected. Blob URLs will not work in OBS. Please use Web URLs for overlays, or use the GIF Export feature above.";
+                urlBox.style.color = "var(--err)";
+                dlBtn.disabled = true; dlBtn.style.opacity = "0.5"; dlBtn.style.cursor = "not-allowed";
+            } else {
+                urlBox.innerText = finalUrl;
+                urlBox.style.color = "#00ff41";
+                document.getElementById('urlCount').innerText = finalUrl.length;
+                document.getElementById('lenWarning').style.display = finalUrl.length > 4000 ? 'block' : 'none';
+                dlBtn.disabled = false; dlBtn.style.opacity = "1"; dlBtn.style.cursor = "pointer";
+            }
             
             // Dynamic CSS logic
             let css = `html, body { margin: 0; padding: 0; overflow: hidden; background-color: rgba(0,0,0,0) !important; } #bouncing-image { position: absolute; will-change: transform; transform-origin: top left; width: ${standardWidth}px !important; height: auto !important; object-fit: contain;}`;
@@ -368,9 +402,10 @@
             if (!currentImages.length) return alert("Add images first.");
             const btn = document.getElementById('gifBtn');
             const originalText = "Download GIF";
-            btn.innerText = "Encoding..."; btn.disabled = true;
+            btn.innerText = "Preparing..."; btn.disabled = true;
 
             const bgColor = document.getElementById('gifBg').value;
+            const isTransparent = document.getElementById('gifTransparent').checked;
 
             try {
                 // Fetch worker code and create a local Blob
@@ -381,54 +416,62 @@
                 const workerUrl = URL.createObjectURL(workerBlob);
 
                 // Dynamically determine canvas size
-                const userSpeed = parseFloat(document.getElementById('imgSpeed').value) || 15;
+                const userSpeed = (parseFloat(document.getElementById('imgSpeed').value) || 15);
                 const totalFrames = 300; // 9 seconds at 30ms delay
                 const targetSize = 200;
-                const startX = 40, startY = 40;
                 
-                const ppf = Math.max(1, Math.round(userSpeed / 2.5)); 
+                // Calculate pixels per frame based on speed (approximate conversion)
+                const ppf = Math.max(1, userSpeed * 0.2); // Adjusted to match live preview speed
 
                 const finalW = Math.min (1100, (ppf * totalFrames / 4) + targetSize);
                 const finalH = Math.min (1100, (ppf * totalFrames / 6) + targetSize);
 
+                // Load images once to avoid double-downloading and race conditions
+                const loadImages = currentImages.map(url => {
+                    return new Promise((resolve) => {
+                        const img = new Image();
+                        img.crossOrigin = "Anonymous";
+                        img.onload = () => resolve(img);
+                        img.onerror = () => resolve(null);
+                        img.src = url;
+                    });
+                });
+
+                const loadedImgs = (await Promise.all(loadImages)).filter(i => i);
+                if (!loadedImgs.length) throw new Error("No valid images loaded");
+
+                // Determine a safe transparency key using the already loaded images
+                const safeKey = isTransparent ? getSafeTransparentColor(loadedImgs) : { hex: null, str: null };
+
                 const gif = new GIF({ 
                     workers: 2, quality: 1, width: finalW, height: finalH, 
-                    workerScript: workerUrl, dither: false
+                    workerScript: workerUrl, dither: false, 
+                    transparent: isTransparent ? safeKey.hex : null
+                });
+
+                // Add progress feedback so user knows it hasn't crashed
+                gif.on('progress', p => {
+                    btn.innerText = `Encoding ${Math.round(p * 100)}%`;
                 });
 
                 const tempCanvas = document.createElement('canvas');
                 const ctx = tempCanvas.getContext('2d');
                 tempCanvas.width = finalW; tempCanvas.height = finalH;
 
-                ctx.imageSmoothingEnabled = true;
+                // Disable smoothing for transparent exports to prevent halos on edges
+                ctx.imageSmoothingEnabled = !isTransparent;
                 ctx.imageSmoothingQuality = 'high';
 
-                const loadImages = currentImages.map(url => {
-                    return new Promise((resolve) => {
-                        const img = new Image();
-                        img.crossOrigin = "Anonymous";
-                        img.onload = () => resolve(img);
-                        img.src = url;
-                    });
-                });
-
-                const loadedImgs = await Promise.all(loadImages);
-
                 let imgIdx = 0;
-                let currentLogo = loadedImgs[imgIdx];
                 let lastSwapTime = 0; // Simulated seconds
-                let x = startX, y = startY, dx = 1, dy = 1;
   
                 const delay = 30; 
-                const dt = delay / 1000; 
+                const loopDt = delay / 1000; 
+                let lastSegX = 0, lastSegY = 0;
                 
                 for (let i = 0; i < totalFrames; i++) {
                     const loopBg = document.getElementById('gifBg').value;
-                    const loopSpeed = parseFloat(document.getElementById('imgSpeed').value) || 15;
-                    const loopDt = 30 / 1000;
                     const loopSimTime = i * loopDt;
-                    const targetSize = 200;
-                    const loopStartX = 0, loopStartY = 0;
                     const swapSecs = parseFloat(document.getElementById('switchTime').value) || 0;
 
                     let currentLogo = loadedImgs[imgIdx];
@@ -440,39 +483,64 @@
                         iw = 200 * ratio;
                     }
 
-                    const totalDistX = (finalW - iw) * 4;
-                    const totalDistY = (finalH - ih) * 6;
+                    // Formula-Based Physics 
+                    const boxSize = targetSize;
+                    
+                    // Calculate total distance for exactly 2 laps (horizontal) and 3 laps (vertical)
+                    const totalDistX = (finalW - boxSize) * 4;
+                    const totalDistY = (finalH - boxSize) * 6;
         
+                    // Linear progress based on frame index
                     const movedX = (totalDistX * i) / totalFrames;
                     const movedY = (totalDistY * i) / totalFrames;
-        
-                    const lapSizeX = (finalW - iw) * 2;
-                    const lapSizeY = (finalH - ih) * 2;
-                    
-                    const relX = movedX % lapSizeX;
-                    const relY = movedY % lapSizeY;
-                    
-                    const x = relX < (lapSizeX / 2) ? relX : lapSizeX - relX;
-                    const y = relY < (lapSizeY / 2) ? relY : lapSizeY - relY;
-        
-                    const currentX = relX < (lapSizeX / 2) ? relX : lapSizeX - relX;
-                    const currentY = relY < (lapSizeY / 2) ? relY : lapSizeY - relY;
 
-                    ctx.fillStyle = loopBg;
-                    ctx.fillRect(0, 0, finalW, finalH);
+                    // Calculate segments for swap detection
+                    const maxX = finalW - boxSize;
+                    const maxY = finalH - boxSize;
+                    const segX = Math.floor(movedX / (maxX || 1));
+                    const segY = Math.floor(movedY / (maxY || 1));
+        
+                    // Convert linear progress to bounce 
+                    const getBouncePos = (val, max) => {
+                        const cycle = val % (max * 2);
+                        return cycle < max ? cycle : (max * 2) - cycle;
+                    };
+
+                    const x = getBouncePos(movedX, maxX);
+                    const y = getBouncePos(movedY, maxY);
+
+                    // Center the actual image inside the Virtual Box
+                    const drawX = x + (boxSize - iw) / 2;
+                    const drawY = y + (boxSize - ih) / 2;
+
+                    if (isTransparent) {
+                        ctx.fillStyle = safeKey.str; // Use calculated safe key
+                        ctx.fillRect(0, 0, finalW, finalH);
+                    } else {
+                        ctx.fillStyle = loopBg;
+                        ctx.fillRect(0, 0, finalW, finalH);
+                    }
 
                     ctx.save();
-                    ctx.drawImage(currentLogo, Math.trunc(x), Math.trunc(y), iw, ih);
+                    if (isTransparent) {
+                        // Snap to integer pixels to prevent anti-aliasing artifacts on transparent backgrounds
+                        ctx.drawImage(currentLogo, Math.round(drawX), Math.round(drawY), iw, ih);
+                    } else {
+                        // Use sub-pixel rendering for smoother motion on solid backgrounds
+                        ctx.drawImage(currentLogo, drawX, drawY, iw, ih);
+                    }
                     ctx.restore();
                     
                     gif.addFrame(ctx, { copy: true, delay: delay });
 
-                    const hitX = (x <= 0.5 || x + iw >= finalW - 0.5);
-                    const hitY = (y <= 0.5 || y + ih >= finalH - 0.5);
-
                     // Swap Logic
-                    const shouldSwap = (swapSecs === 0 && (x <= 0 || x + iw >= finalW || y <= 0 || y + ih >= finalH)) || 
+                    let bounced = false;
+                    if (segX !== lastSegX) { bounced = true; lastSegX = segX; }
+                    if (segY !== lastSegY) { bounced = true; lastSegY = segY; }
+                    
+                    const shouldSwap = (swapSecs === 0 && bounced) || 
                                        (swapSecs > 0 && (loopSimTime - lastSwapTime) >= swapSecs);
+                                       
                     if (shouldSwap && loadedImgs.length > 1) {
                         imgIdx = (imgIdx + 1) % loadedImgs.length;
                         lastSwapTime = loopSimTime;
@@ -490,12 +558,60 @@
             } catch (err) { alert("GIF Error: " + err); btn.innerText = "Download GIF"; btn.disabled = false; }
         }
 
+        // Helper to find a color not present in the images to use as a transparency key
+        function getSafeTransparentColor(loadedImages) {
+            const usedColors = new Set();
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+            // Scan all images and record every color used
+            for (const img of loadedImages) {
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                ctx.drawImage(img, 0, 0);
+                
+                try {
+                    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                    for (let i = 0; i < data.length; i += 4) {
+                        if (data[i+3] === 0) continue; // Skip fully transparent pixels
+                        const colorVal = (data[i] << 16) | (data[i+1] << 8) | data[i+2];
+                        usedColors.add(colorVal);
+                    }
+                } catch (e) {
+                    console.warn("Could not read image data (likely CORS). Skipping color safety check for image.");
+                }
+            }
+
+            // Check preferred green screen colors first
+            const candidates = [0xFF00FF, 0x00FF00, 0x0000FF, 0xFF0000, 0x00FFFF, 0xFFFF00];
+            for (const c of candidates) {
+                if (!usedColors.has(c)) {
+                    return { hex: c, str: '#' + c.toString(16).padStart(6, '0').toUpperCase() };
+                }
+            }
+
+            // Fail-safe: Find the first unused color in the RGB spectrum
+            for (let i = 0; i <= 0xFFFFFF; i++) {
+                if (!usedColors.has(i)) {
+                    return { hex: i, str: '#' + i.toString(16).padStart(6, '0').toUpperCase() };
+                }
+            }
+
+            return { hex: 0xFF00FF, str: '#FF00FF' }; // Should never happen
+        }
+
+        // Global resize handler reference to prevent memory leaks
+        let currentResizeHandler = null;
+
         // ANIMATION 
         function startLiveMode(isPreview, settings = null, imagesArr = null) {
             // Cancel any existing animation to prevent overlap
             if (animationId) {
                 cancelAnimationFrame(animationId);
                 animationId = null;
+            }
+            if (currentResizeHandler) {
+                window.removeEventListener('resize', currentResizeHandler);
             }
 
             lastFrameTime = 0;
@@ -511,14 +627,41 @@
             
             if (targetImg) targetImg.style.display = 'block';
 
-            const imgs = imagesArr || JSON.parse(decodeURIComponent(params.get('imgs')));
+            let imgs = [];
+            try {
+                const pImgs = params.get('imgs');
+                imgs = imagesArr || (pImgs ? JSON.parse(decodeURIComponent(pImgs)) : []);
+            } catch (e) {
+                console.error("Error parsing images:", e);
+                return;
+            }
+            if (!Array.isArray(imgs)) imgs = [];
+
             const effect = settings?.e || params.get('e');
             const swap = parseInt(settings?.t || params.get('t')) || 0;
 
             let x = 20, y = 20, dx = 1, dy = 1, idx = 0, slow = false, lastSw = Date.now();
+            
+            // Preload images
+            imgs.forEach(u => { new Image().src = u; });
+
+            // Cache dimensions
+            let w = isPreview ? container.clientWidth : window.innerWidth;
+            let h = isPreview ? container.clientHeight : window.innerHeight;
+            let iw = 0, ih = 0;
+
+            // Define resize handler
+            currentResizeHandler = () => {
+                w = isPreview ? container.clientWidth : window.innerWidth;
+                h = isPreview ? container.clientHeight : window.innerHeight;
+            };
+            window.addEventListener('resize', currentResizeHandler);
+
             targetImg.crossOrigin = "anonymous";
             targetImg.style.display = 'block';
-            targetImg.src = imgs[idx];
+
+            // Cache speed input element to avoid DOM search in loop
+            const speedInput = isPreview ? document.getElementById('imgSpeed') : null;
 
             function animate(now) {
                 if (!lastFrameTime) {
@@ -529,13 +672,19 @@
                 const dt = Math.min((now - lastFrameTime) / 1000, 0.1); // Cap dt to prevent jumps
                 lastFrameTime = now;
 
-                const w = isPreview ? container.clientWidth : window.innerWidth;
-                const h = isPreview ? container.clientHeight : window.innerHeight;
-                const iw = targetImg.clientWidth || 80;
-                const ih = targetImg.clientHeight || 80;
+                // Update image dimensions if not yet calculated
+                if (iw === 0 || ih === 0) {
+                    iw = targetImg.clientWidth;
+                    ih = targetImg.clientHeight;
+                    // If still 0 (not rendered), skip frame
+                    if (iw === 0 || ih === 0) {
+                        animationId = requestAnimationFrame(animate);
+                        return;
+                    }
+                }
 
                 const rawSpeed = isPreview 
-                    ? (parseFloat(document.getElementById('imgSpeed').value)) 
+                    ? (parseFloat(speedInput.value)) 
                     : (parseFloat(params.get('v')));
                 
                 const baseSpeed = isNaN(rawSpeed) ? 15 : rawSpeed;
@@ -547,13 +696,33 @@
                     y += dy * velocity * dt * 10;
                 }
                 
-                let hX = (x + iw >= w || x <= 0);
-                let hY = (y + ih >= h || y <= 0);
+                let hX = false, hY = false;
+                const xLimit = w - iw;
+                const yLimit = h - ih;
+
+                // Collision Logic (Velocity-based + Oversized handling)
+                
+                // Horizontal
+                if (iw <= w) {
+                    if (x >= xLimit && dx > 0) { dx = -dx; hX = true; }
+                    else if (x <= 0 && dx < 0) { dx = -dx; hX = true; }
+                } else {
+                    // If image is wider than screen, bounce when the ends hit the screen edges (panning)
+                    if (x >= 0 && dx > 0) { dx = -dx; hX = true; }
+                    else if (x <= xLimit && dx < 0) { dx = -dx; hX = true; }
+                }
+
+                // Vertical
+                if (ih <= h) {
+                    if (y >= yLimit && dy > 0) { dy = -dy; hY = true; }
+                    else if (y <= 0 && dy < 0) { dy = -dy; hY = true; }
+                } else {
+                    if (y >= 0 && dy > 0) { dy = -dy; hY = true; }
+                    else if (y <= yLimit && dy < 0) { dy = -dy; hY = true; }
+                }
                 
                 if (hX && hY) triggerCelebration(effect, isPreview ? container : document.body, targetImg, (s) => slow = s);
                 
-                if (hX) { dx = -dx; x = Math.max(0, Math.min(x, w - iw)); }
-                if (hY) { dy = -dy; y = Math.max(0, Math.min(y, h - ih)); }
         
                 const activeImgs = isPreview ? currentImages : imgs;
                 const swapSecs = isPreview ? (parseFloat(document.getElementById('switchTime').value) || 0) : (parseFloat(params.get('t')) || 0);
@@ -563,26 +732,47 @@
                     if (activeImgs.length > 1) { 
                         idx = (idx + 1) % activeImgs.length; 
                         targetImg.src = activeImgs[idx]; 
+                        // Reset dimensions for recalculation
+                        iw = 0; ih = 0;
                         lastSw = Date.now(); 
                     }
                 }
                 
+                // Safety Net: Only reset if COMPLETELY off screen (handles resize)
+                if (x > w) x = w - iw;
+                if (x + iw < 0) x = 0;
+                if (y > h) y = h - ih;
+                if (y + ih < 0) y = 0;
+
                 targetImg.style.transform = `translate3d(${x.toFixed(3)}px, ${y.toFixed(3)}px, 0.001px)`;
                 animationId = requestAnimationFrame(animate);
             }
         
             const start = () => {
-                // Prevent multiple loops from starting if onload fires after a 'complete' check
+                // Prevent multiple loops from starting if onload fires after a complete check
                 if (animationId) cancelAnimationFrame(animationId);
                 lastFrameTime = performance.now();
+                
+                // Refresh dimensions on start/restart
+                w = isPreview ? container.clientWidth : window.innerWidth;
+                h = isPreview ? container.clientHeight : window.innerHeight;
+                iw = targetImg.clientWidth || 0;
+                ih = targetImg.clientHeight || 0;
+
                 animationId = requestAnimationFrame(animate);
             };
+
+            // Update cached window dimensions on resize
+            window.addEventListener('resize', () => {
+                w = isPreview ? container.clientWidth : window.innerWidth;
+                h = isPreview ? container.clientHeight : window.innerHeight;
+            });
         
             // Set the onload listener before setting .src to ensure it catches the event
             if (targetImg.complete && targetImg.naturalWidth > 0) {
                 start();
             } else {
-                targetImg.onload = start;
+                targetImg.onload = () => { if (!animationId) start(); };
             }
             
             targetImg.src = imgs[idx];
