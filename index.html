@@ -46,8 +46,8 @@
         button.follow-btn:hover { background: #fff; color: #9146FF; }
         button.clear-btn { background: var(--err) !important; color: #fff; }
         button.clear-btn:hover { background: #fff !important; color: var(--err) !important; }
-        button.reset-btn { background: var(--err) !important; color: #fff; }
-        button.reset-btn:hover { background: #fff !important; color: var(--err) !important; }
+        button.reset-btn { background: #444; color: #fff; }
+        button.reset-btn:hover { background: #666; }
         .upload-row { display: flex; align-items: center; justify-content: space-between; background: #252525; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #444; font-size: 0.85em; }
         button.del-btn { width: auto !important; padding: 4px 10px !important; margin: 0 !important; background: var(--err) !important; color: white !important; font-size: 11px !important; }
 
@@ -158,18 +158,17 @@
         const img = document.getElementById('bouncing-image');
         let currentImages = []; 
         let localAssets = []; // Storage for local file data
-        let lastFrameTime = performance.now();
+        let lastFrameTime = 0;
         let animationId = null; // Track animation to prevent duplicates
 
         document.addEventListener('DOMContentLoaded', () => {
             if (params.has('imgs')) { 
                 if (params.has('m')) {
                     const maxSize = params.get('m') + 'px';
-                    img.style.maxWidth = maxSize;
-                    img.style.maxHeight = maxSize;
+                    img.style.width = maxSize;
+                    img.style.height = 'auto';
                     img.style.objectFit = 'contain';
                 }
-                
                 startLiveMode(false); 
             } else { 
                 document.getElementById('setup-ui').style.display = 'block'; 
@@ -418,8 +417,8 @@
                 // Calculate pixels per frame based on speed (approximate conversion)
                 const ppf = Math.max(1, userSpeed * 0.2); 
 
-                const finalW = Math.min (1100, (ppf * totalFrames / 4) + targetSize);
-                const finalH = Math.min (1100, (ppf * totalFrames / 6) + targetSize);
+                const finalW = Math.floor(Math.min (1100, (ppf * totalFrames / 4) + targetSize));
+                const finalH = Math.floor(Math.min (1100, (ppf * totalFrames / 6) + targetSize));
 
                 const gif = new GIF({ 
                     workers: 2, quality: 1, width: finalW, height: finalH, 
@@ -577,12 +576,29 @@
             }
 
             const effect = settings?.e || params.get('e');
-            const swap = parseInt(settings?.t || params.get('t')) || 0;
-
+            
             let x = 20, y = 20, dx = 1, dy = 1, idx = 0, slow = false, lastSw = Date.now();
             
-            // Preload images
-            imgs.forEach(u => { new Image().src = u; });
+            // Cache static settings for overlay mode
+            const overlaySpeed = !isPreview ? (parseFloat(params.get('v')) || 15) : 0;
+            const overlaySwap = !isPreview ? (parseFloat(params.get('t')) || 0) : 0;
+            const maxSize = parseFloat(settings?.m || params.get('m')) || 200;
+
+            // Pre-calculate dimensions to match CSS 
+            const dimensionsCache = new Array(imgs.length).fill(null);
+            
+            imgs.forEach((u, i) => { 
+                const im = new Image();
+                im.onload = () => {
+                    const ratio = im.naturalHeight / im.naturalWidth;
+                    dimensionsCache[i] = { w: maxSize, h: maxSize * ratio };
+                };
+                im.onerror = () => {
+                    // Fallback dimensions if load fails, to prevent loop freeze
+                    dimensionsCache[i] = { fallback: true }; 
+                };
+                im.src = u; 
+            });
 
             // Cache dimensions
             let w = isPreview ? container.clientWidth : window.innerWidth;
@@ -603,29 +619,45 @@
             const speedInput = isPreview ? document.getElementById('imgSpeed') : null;
             const switchTimeInput = isPreview ? document.getElementById('switchTime') : null;
 
+            // Cap framerate to 60FPS to prevent stream software stuttering on high-refresh monitors
+            const fpsInterval = 1000 / 60;
+
             function animate(now) {
+                // Request next frame immediately
+                animationId = requestAnimationFrame(animate);
+
                 if (!lastFrameTime) {
                     lastFrameTime = now;
-                    animationId = requestAnimationFrame(animate);
                     return;
                 }
-                const dt = Math.min((now - lastFrameTime) / 1000, 0.1); // Cap dt to prevent jumps
-                lastFrameTime = now;
+
+                // Throttle, if not enough time has passed for 60fps skip this frame
+                const elapsed = now - lastFrameTime;
+                if (elapsed < fpsInterval) return;
+
+                const dt = elapsed / 1000; // Use actual elapsed time for dt
+                lastFrameTime = now - (elapsed % fpsInterval); // Adjust for drift
 
                 // Update image dimensions if not yet calculated
                 if (iw === 0 || ih === 0) {
-                    iw = targetImg.clientWidth;
-                    ih = targetImg.clientHeight;
-                    // If still 0 (not rendered), skip frame
-                    if (iw === 0 || ih === 0) {
-                        animationId = requestAnimationFrame(animate);
-                        return;
+                    // Try cache first to avoid DOM read
+                    if (dimensionsCache[idx] && !dimensionsCache[idx].fallback) {
+                        iw = dimensionsCache[idx].w;
+                        ih = dimensionsCache[idx].h;
+                    } else {
+                        // Cache for this image isn't ready or failed. Try DOM.
+                        iw = targetImg.clientWidth;
+                        ih = targetImg.clientHeight;
+                        if (iw === 0 || ih === 0) {
+                            // Still not ready
+                            return;
+                        }
                     }
                 }
 
                 const rawSpeed = isPreview 
                     ? (parseFloat(speedInput.value)) 
-                    : (parseFloat(params.get('v')));
+                    : overlaySpeed;
                 
                 const baseSpeed = isNaN(rawSpeed) ? 15 : rawSpeed;
 
@@ -665,15 +697,21 @@
                 
         
                 const activeImgs = isPreview ? currentImages : imgs;
-                const swapSecs = isPreview ? (parseFloat(switchTimeInput.value) || 0) : (parseFloat(params.get('t')) || 0);
+                const swapSecs = isPreview ? (parseFloat(switchTimeInput.value) || 0) : overlaySwap;
                 const timePassed = (Date.now() - lastSw) / 1000;
         
                 if ((swapSecs === 0 && (hX || hY)) || (swapSecs > 0 && timePassed >= swapSecs)) {
                     if (activeImgs.length > 1) { 
                         idx = (idx + 1) % activeImgs.length; 
                         targetImg.src = activeImgs[idx]; 
-                        // Reset dimensions for recalculation
-                        iw = 0; ih = 0;
+                        
+                        // Use cache immediately if available to prevent reflow
+                        if (dimensionsCache[idx] && !dimensionsCache[idx].fallback) {
+                            iw = dimensionsCache[idx].w;
+                            ih = dimensionsCache[idx].h;
+                        } else {
+                            iw = 0; ih = 0; // Force DOM read next frame
+                        }
                         lastSw = Date.now(); 
                     }
                 }
@@ -685,19 +723,26 @@
                 if (y + ih < 0) y = 0;
 
                 targetImg.style.transform = `translate3d(${x.toFixed(3)}px, ${y.toFixed(3)}px, 0.001px)`;
-                animationId = requestAnimationFrame(animate);
             }
         
             const start = () => {
                 // Prevent multiple loops from starting if onload fires after a complete check
                 if (animationId) cancelAnimationFrame(animationId);
-                lastFrameTime = performance.now();
+                lastFrameTime = 0;
                 
                 // Refresh dimensions on start/restart
                 w = isPreview ? container.clientWidth : window.innerWidth;
                 h = isPreview ? container.clientHeight : window.innerHeight;
-                iw = targetImg.clientWidth || 0;
-                ih = targetImg.clientHeight || 0;
+                
+                // Initial dimension set
+                if (dimensionsCache[idx] && !dimensionsCache[idx].fallback) {
+                    iw = dimensionsCache[idx].w;
+                    ih = dimensionsCache[idx].h;
+                } else {
+                    // On first load, might need one DOM read if cache isn't ready
+                    iw = targetImg.clientWidth || 0;
+                    ih = targetImg.clientHeight || 0;
+                }
 
                 animationId = requestAnimationFrame(animate);
             };
